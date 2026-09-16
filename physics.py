@@ -16,7 +16,7 @@ import torch
 from scipy.optimize import least_squares
 
 # The 13 constants below are fitted once to HSE06 reference data and then held
-# fixed. Regenerate them with:  python 03_fit_physics_constants.py --freeze
+# fixed. Regenerate them with:  python 02_fit_physics_constants.py --freeze
 # The fit uses the training fold only, so the test fold stays unseen.
 
 # --- CBM deformation-potential constants (eV) ---
@@ -40,7 +40,7 @@ D_BP   = -1.9671238909825762e-07
 # --- optional per-run constant override ---
 # Setting the environment variable PHYSICS_CONST_JSON to a JSON file of
 # {name: value} replaces any subset of the constants above when this module is
-# imported. 11_run_matched_prior.py uses it to give each run a set fitted on only
+# imported. 09_run_matched_prior.py uses it to give each run a set fitted on only
 # that run's labelled rows. With the variable unset the values above are used.
 
 CONSTANT_NAMES = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",
@@ -150,7 +150,7 @@ def physics_eg(strain, beta=None):
 # --- numpy versions, used for fitting ---
 # The functions above are torch, because training differentiates through them.
 # Fitting is a scipy least-squares problem, so the same equations appear here in
-# numpy. 03_fit_physics_constants.py checks the two agree.
+# numpy. 02_fit_physics_constants.py checks the two agree.
 
 CBM_KEYS = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2"]
 VBM_KEYS = ["VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]

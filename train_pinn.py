@@ -170,7 +170,13 @@ parser.add_argument("--optimizer",  type=str, default="adamw_soap",
                     choices=["adamw_soap", "soap", "adamw", "adam", "lbfgs",
                              "rmsprop", "sgd"])
 parser.add_argument("--beta",       type=float, default=C.SOFTMIN_BETA)
-args = parser.parse_args()
+# Parse the command line only when run as a script. When another script imports
+# this module for its model or data pipeline, take the defaults instead, so the
+# importer's own arguments are left alone.
+if __name__ == "__main__":
+    args = parser.parse_args()
+else:
+    args = parser.parse_args([])
 
 # The physics-free control is the same network with every physics term switched
 # off, so it is expressed as a --drop_loss set rather than a separate model.
@@ -425,7 +431,7 @@ class PINNModel(nn.Module):
     Eg = CBM - VBM is structural, not learned, so the identity holds exactly.
 
     Normalisation, dropout and residual connections are available but off by
-    default; 06_decide_architecture.py measures each of them.
+    default; 04_decide_architecture.py measures each of them.
     """
 
     def __init__(self, cbm_mean, vbm_mean):
@@ -892,7 +898,7 @@ def train(data, device):
 
         # Early stopping, off unless --patience is set. Nothing is lost by
         # training on when the best checkpoint is kept, so this is a compute
-        # decision; it is measured, not assumed, by 08_decide_budget.py.
+        # decision; it is measured, not assumed, by 06_decide_budget.py.
         if args.patience > 0 and stale_ckpts >= args.patience:
             print("  early stop at epoch %d: %d checkpoints without improvement"
                   % (ep, stale_ckpts))

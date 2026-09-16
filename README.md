@@ -53,13 +53,17 @@ They group into seven stages; each stage settles something the next assumes.
 
 | stage | scripts | purpose |
 |---|---|---|
-| **setup** | `01_check_environment.py`, `02_check_data.py`, `03_fit_physics_constants.py` | record the environment, describe the data, fit the physics constants |
-| **decide** | `04_check_sanity.py`, `05_decide_split.py`, `06_decide_architecture.py`, `07_decide_optimizer.py`, `08_decide_budget.py` | settle every training setting, before any large run |
-| **measure** | `09_confirm_settings.py`, `10_run_label_sweep.py`, `11_run_matched_prior.py`, `12_run_classical_baselines.py` | the main experiment: accuracy against how many labels were used |
-| **ablate** | `13_ablate_loss_terms.py`, `14_ablate_design_choices.py`, `15_ablate_duplicates.py` | what each part of the model contributes |
-| **validate** | `16_validate_physics.py`, `17_validate_generalization.py`, `18_validate_robustness.py`, `19_validate_explainability.py`, `20_validate_performance.py` | what the trained model can and cannot do |
-| **tune** | `21_search_hyperparameters.py` | a large hyperparameter search, run after the main experiment |
-| **report** | `22_make_tables.py`, `23_make_figures.py` | tables and figures |
+| **setup** | `01_check.py`, `02_fit_physics_constants.py` | check the environment, the dataset and the training setup; fit the physics constants |
+| **decide** | `03_decide_split.py`, `04_decide_architecture.py`, `05_decide_optimizer.py`, `06_decide_budget.py` | settle every training setting, before any large run |
+| **measure** | `07_confirm_settings.py`, `08_run_label_sweep.py`, `09_run_matched_prior.py`, `10_run_classical_baselines.py` | the main experiment: accuracy against how many labels were used |
+| **ablate** | `11_ablate.py` | what each part of the model contributes |
+| **validate** | `12_validate.py` | what the trained model can and cannot do |
+| **tune** | `13_search_hyperparameters.py` | a large hyperparameter search, run after the main experiment |
+| **report** | `14_report.py` | tables and figures |
+
+Scripts that cover several related checks take the check as their first
+argument, for example `python 12_validate.py robustness` or
+`python 01_check.py all`.
 
 Two scripts are not stages. `train_pinn.py` trains one physics-informed model
 and `train_baseline.py` trains one comparison model; the stage scripts call them
@@ -148,7 +152,7 @@ model.
 
 ## Reproducibility
 
-`01_check_environment.py` records the interpreter, the package versions, the GPUs, a
+`01_check.py environment` records the interpreter, the package versions, the GPUs, a
 checksum of the dataset and the random-seed policy. Run it before and after a
 long study: if the two records differ, the results straddle a change in the
 environment and are not a single experiment.

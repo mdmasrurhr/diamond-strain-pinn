@@ -15,7 +15,7 @@ import physics as P
 import train_pinn
 
 # The band-edge equations, the fitters and the constant names all live in
-# physics.py so that this script and 11_run_matched_prior.py cannot drift
+# physics.py so that this script and 09_run_matched_prior.py cannot drift
 # apart. Local aliases keep the code below readable.
 CBM_KEYS, VBM_KEYS = P.CBM_KEYS, P.VBM_KEYS
 cbm_model, vbm_model = P.cbm_numpy, P.vbm_numpy
