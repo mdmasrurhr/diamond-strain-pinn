@@ -1,19 +1,5 @@
-"""Re-run a small set of configurations to confirm the chosen settings still hold.
-
-The settings were selected in separate studies. This trains the few
-configurations that carry each choice, at the full budget, and checks the
-orderings are unchanged before a long run starts.
-
-    architecture   the chosen network against the best and the runner-up
-    optimizer      SOAP alone and AdamW alone against the two-phase default
-    weighting      the self-adaptive variant on the chosen network
-
-    python confirm_settings.py            # run the configurations
-    python confirm_settings.py --guard    # pass/fail verdict, exit 1 on fail
-
---guard exits non-zero on failure so it can gate a long run from a shell script.
-
-Writes results/settings_confirmation/<variant>/seed<n>/.
+"""Retrain the configurations that carry each chosen setting and check the orderings
+still hold. Exits non-zero on failure so it can gate a long run.
 """
 
 import argparse

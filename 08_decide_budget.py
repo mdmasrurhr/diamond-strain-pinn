@@ -1,26 +1,4 @@
-"""Measure how many epochs and how many seeds a run needs.
-
-EPOCHS. Training uses a fixed budget with no early stopping, keeping the
-checkpoint with the lowest validation error. If that checkpoint is the last one
-taken, the model was still improving when training stopped and the budget, not
-the model, set the reported accuracy. This script finds the smallest budget for
-which that is no longer true.
-
-The learning rate follows cosine annealing with warm restarts (T_0=500,
-T_mult=2), so it reaches a minimum at epochs 499, 1499, 3000, 3999, 5999, 11999
-and 23999. The candidate budgets are those epochs, because stopping anywhere
-else discards the anneal that produces the best checkpoint.
-
-SEEDS. A power analysis on the spread of existing runs gives the smallest
-difference a given number of seeds can resolve. It needs no training.
-
-    python decide_budget.py --seeds_only    # power analysis only, no training
-    python decide_budget.py                 # epoch grid, 3 seeds
-    python decide_budget.py --patience      # also the early-stopping grid
-    python decide_budget.py --report
-
-Writes results/budget_study/.
-"""
+"""Measure how many epochs a run needs and how many seeds a comparison needs."""
 
 import argparse
 import math

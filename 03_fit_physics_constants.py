@@ -1,36 +1,5 @@
-"""
-fit_physics_constants.py -- fit the analytic band-edge model and say how good it is.
-
-The physics the networks are constrained by is a closed-form model of the two
-band edges with 13 constants. Those constants are fitted to DFT labels once and
-then frozen; every training run uses the same numbers.
-
-This script does three things:
-
-  1. Re-fits the constants and checks they reproduce the frozen values in
-     physics.py (a parity check -- if this fails, the pipeline is inconsistent).
-  2. Scores the analytic model on its own, with no network involved. That is the
-     error a PINN starts from before it sees a single label.
-  3. Measures how many labels the fit itself needs, by re-fitting on k states
-     and scoring on held-out data. This is the calibration cost a new material
-     would have to pay, and it is the number to quote when asked whether the
-     approach transfers.
-
-    python fit_physics_constants.py             # parity + calibration cost
-    python fit_physics_constants.py --freeze    # fit the production constants
-
---freeze is the step that produces the frozen constants in physics.py, and its
-protocol answers the two defects the old calibration carried:
-
-  * it fits on the SEED-42 TRAINING FOLD only, never on all rows, so the
-    constants have not seen the canonical test fold (the old fits used every
-    row, which put every downstream test state inside the calibration data);
-  * it re-fits on the folds of two further seeds and reports the spread, so
-    "the constants are stable across folds" is a measured statement.
-
-It writes results/physics_fit/constants_v9_fold42.json and prints the block to
-paste into physics.py. physics.py stays the single frozen source; this script
-is how its numbers are produced and audited.
+"""Fit the 13 constants of the analytic band-edge model and measure how many labels
+the fit itself needs.
 """
 
 import argparse
@@ -46,7 +15,7 @@ import physics as P
 import train_pinn
 
 # The band-edge equations, the fitters and the constant names all live in
-# physics.py so that this script and run_matched_prior.py cannot drift
+# physics.py so that this script and 11_run_matched_prior.py cannot drift
 # apart. Local aliases keep the code below readable.
 CBM_KEYS, VBM_KEYS = P.CBM_KEYS, P.VBM_KEYS
 cbm_model, vbm_model = P.cbm_numpy, P.vbm_numpy

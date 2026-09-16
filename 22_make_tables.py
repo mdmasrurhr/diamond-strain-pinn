@@ -1,12 +1,4 @@
-"""Gather every finished run into aggregated tables.
-
-Each run writes its own metrics_summary.csv. This walks results/, reads all of
-them, and writes the summary tables. Cheap and safe to repeat.
-
-    python make_tables.py
-
-Writes results/tables/
-"""
+"""Gather every finished run into aggregated tables."""
 
 import glob
 import os

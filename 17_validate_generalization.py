@@ -1,17 +1,5 @@
-"""Measure whether the model learned the mapping or memorised the samples.
-
-Test error alone does not separate the two, because every deformation family
-and every strain magnitude appears in training. Three measurements, all read
-from runs that already exist.
-
-    memorisation   train error against test error, per label fraction. A large
-                   gap means memorisation; both high means underfitting.
-    family         error on a deformation family held out of training.
-    magnitude      error beyond the strain range seen in training.
-
-    python validate_generalization.py
-
-Writes results/generalization/*.csv
+"""Measure the train-test gap, accuracy on an unseen deformation family, and
+accuracy beyond the strain range seen in training.
 """
 
 import os
@@ -53,7 +41,7 @@ def out_of_sample():
     root = os.path.join(C.RESULTS, "split_study")
     df = decide.collect(root, ["scheme", "run"])
     if not len(df):
-        print("\nno split-study runs found -- run decide_split.py first")
+        print("\nno split-study runs found -- run 05_decide_split.py first")
         return pd.DataFrame()
 
     agg = decide.aggregate(df, ["scheme"])

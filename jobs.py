@@ -1,15 +1,4 @@
-"""
-jobs.py -- shared plumbing for running many training jobs. No science here.
-
-Every study script (05 onward) builds a list of shell commands and hands it to
-run_jobs(). This file exists so that the process-pool logic is written once
-rather than copied into each of them, where the copies would drift.
-
-The models are small: a run uses ~20 MB of GPU memory and cannot saturate a
-card on its own, so several run side by side on each GPU. Each job is a
-separate process with its own seed, so results are identical to running the
-job alone -- only the wall-clock changes.
-"""
+"""Run many training jobs across the available GPUs."""
 
 import os
 import subprocess

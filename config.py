@@ -1,8 +1,4 @@
-"""Settings shared by every script in the pipeline.
-
-Scripts import this module instead of hard-coding values, so a setting appears
-in exactly one place. Command-line flags override these defaults.
-"""
+"""Settings shared by every script. Command-line flags override these defaults."""
 
 import os
 import sys

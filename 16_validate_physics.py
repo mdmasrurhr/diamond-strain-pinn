@@ -1,25 +1,5 @@
-"""
-validate_physics.py -- judge a trained model against physics, not labels.
-
-Test error says how close a model is to the DFT labels. It does not say whether
-the model learned the right physics, and the two can disagree: a network with
-enough freedom can fit the labels closely while its response to strain is
-nonsense.
-
-So this measures something the labels cannot influence. The slope of the bandgap
-with respect to strain at zero strain -- the deformation potential -- is a
-material constant. We finite-difference each trained model around zero strain
-along three directions and compare to the analytic reference. No DFT label
-enters the comparison, which is what makes it an independent check.
-
-We also record response smoothness (how much the prediction moves under a small
-random perturbation), to confirm that a large slope error is a genuinely wrong
-slope rather than a jagged surface.
-
-    python validate_physics.py                       # every model in label_sweep at 100%
-    python validate_physics.py --pct 5
-
-Writes results/physics_validation/validity.csv
+"""Check a trained model against physics it was not fitted to: deformation-potential
+slopes, cubic symmetry and smoothness.
 """
 
 import argparse

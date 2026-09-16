@@ -1,19 +1,4 @@
-"""Remove one loss term at a time and measure the effect.
-
-The training loss is a sum of terms: supervised band-edge errors, physics
-residuals against the analytic model, a gap-consistency term, an anchor holding
-the bands at their unstrained values, and slope conditions at zero strain. Each
-is switched off in turn and the model retrained.
-
-Every variant runs at four label fractions. The physics terms contribute little
-when labels are plentiful and a great deal when they are scarce, so a single
-fraction would not show what they are worth.
-
-    python ablate_loss_terms.py
-    python ablate_loss_terms.py --fractions 1 100
-
-Writes results/loss_ablation/<variant>/<pct>pct/seed<n>/.
-"""
+"""Remove one loss term at a time and retrain."""
 
 import argparse
 

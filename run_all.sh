@@ -51,31 +51,31 @@ stage  () { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }
 # --------------------------------------------------------------------- setup
 if stage setup; then
   banner "environment manifest"
-  $PY check_environment.py
+  $PY 01_check_environment.py
 
   banner "dataset checks"
-  $PY check_data.py
+  $PY 02_check_data.py
 
   banner "physics fit and calibration cost"
-  $PY fit_physics_constants.py
+  $PY 03_fit_physics_constants.py
 fi
 
 # -------------------------------------------------------------------- decide
 if stage decide; then
   banner "sanity checks (cheap, and they fail loudly -- run these first)"
-  $PY check_sanity.py --all
+  $PY 04_check_sanity.py --all
 
   banner "which data split"
-  $PY decide_split.py $FULL
+  $PY 05_decide_split.py $FULL
 
   banner "which architecture"
-  $PY decide_architecture.py $FULL
+  $PY 06_decide_architecture.py $FULL
 
   banner "which optimizer"
-  $PY decide_optimizer.py $FULL
+  $PY 07_decide_optimizer.py $FULL
 
   banner "how many epochs and seeds"
-  $PY decide_budget.py $FULL --patience
+  $PY 08_decide_budget.py $FULL --patience
 
   echo
   echo ">>> STOP HERE. Read the decision files in results/, update config.py,"
@@ -86,29 +86,29 @@ fi
 # ------------------------------------------------------------------- measure
 if stage measure; then
   banner "confirm the settings still hold"
-  $PY confirm_settings.py
-  $PY confirm_settings.py --guard || { echo "settings not confirmed; stopping"; exit 1; }
+  $PY 09_confirm_settings.py
+  $PY 09_confirm_settings.py --guard || { echo "settings not confirmed; stopping"; exit 1; }
 
   banner "accuracy against labelled fraction (the main experiment)"
-  $PY run_label_sweep.py $QUICK
+  $PY 10_run_label_sweep.py $QUICK
 
   banner "physics prior fitted on the same labels"
-  $PY run_matched_prior.py $QUICK
+  $PY 11_run_matched_prior.py $QUICK
 
   banner "classical baselines"
-  $PY run_classical_baselines.py
+  $PY 12_run_classical_baselines.py
 fi
 
 # -------------------------------------------------------------------- ablate
 if stage ablate; then
   banner "remove one loss term at a time"
-  $PY ablate_loss_terms.py $QUICK
+  $PY 13_ablate_loss_terms.py $QUICK
 
   banner "vary one design choice at a time"
-  $PY ablate_design_choices.py $QUICK
+  $PY 14_ablate_design_choices.py $QUICK
 
   banner "repeat on distinct strain states only"
-  $PY ablate_duplicates.py $QUICK
+  $PY 15_ablate_duplicates.py $QUICK
 fi
 
 # ------------------------------------------------------------------ validate
@@ -118,19 +118,19 @@ if stage validate; then
   BEST=results/label_sweep/sa/100pct/seed42
 
   banner "does it obey physics it was not fitted to"
-  $PY validate_physics.py
+  $PY 16_validate_physics.py
 
   banner "memorisation, unseen families, unseen strain magnitudes"
-  $PY validate_generalization.py
+  $PY 17_validate_generalization.py
 
   banner "noisy input, cubic symmetry, shear sign"
-  $PY validate_robustness.py --run_dir "$BEST"
+  $PY 18_validate_robustness.py --run_dir "$BEST"
 
   banner "right answer for the right reason"
-  $PY validate_explainability.py --run_dir "$BEST"
+  $PY 19_validate_explainability.py --run_dir "$BEST"
 
   banner "speed, memory, and what it replaces"
-  $PY validate_performance.py --run_dir "$BEST"
+  $PY 20_validate_performance.py --run_dir "$BEST"
 fi
 
 # ---------------------------------------------------------------------- tune
@@ -140,17 +140,17 @@ fi
 # on the table.
 if stage tune; then
   banner "hyperparameter search"
-  $PY search_hyperparameters.py --trials 300
-  $PY search_hyperparameters.py --confirm
+  $PY 21_search_hyperparameters.py --trials 300
+  $PY 21_search_hyperparameters.py --confirm
 fi
 
 # -------------------------------------------------------------------- report
 if stage report; then
   banner "collect every result into tables"
-  $PY make_tables.py
+  $PY 22_make_tables.py
 
   banner "draw the figures"
-  $PY make_figures.py
+  $PY 23_make_figures.py
 
   echo
   echo "done. tables are in results/tables/ and figures in results/figures/"

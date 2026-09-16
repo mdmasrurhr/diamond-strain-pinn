@@ -1,26 +1,5 @@
-"""Checks for faults that do not raise an exception.
-
-A broken training setup usually still runs to completion with a plausible
-looking loss curve. Each check below targets one way that can happen.
-
-    overfit_batch   train on 8 samples only. If the error does not fall to
-                    near zero, the network or the gradient path is broken.
-    gradients       per-layer gradient norms at initialisation. A layer whose
-                    gradient is orders of magnitude smaller than its
-                    neighbours is not learning.
-    leakage         confirms the scaler saw the training fold only and that no
-                    row appears in two folds.
-    duplicates      counts strain states that appear more than once. Copies
-                    split across train and test inflate the score.
-    label_shuffle   train on shuffled labels. The error must collapse to the
-                    spread of the target; anything better means the model is
-                    reading something other than the labels.
-
-    python check_sanity.py              # all except label_shuffle
-    python check_sanity.py --all        # including the shuffle control
-    python check_sanity.py --check leakage duplicates
-
-Writes results/sanity_checks/sanity_checks.csv
+"""Check for faults that do not raise an exception: broken gradient flow, data
+leakage, duplicate states and labels the model is not actually using.
 """
 
 import argparse

@@ -1,25 +1,5 @@
-"""Random search over the training hyperparameters.
-
-Random rather than grid: over this many settings a grid is either too coarse to
-be useful or too large to run.
-
-Protocol:
-
-  * Trials are scored on validation error only; the test fold is not consulted.
-  * Each trial runs at three seeds and is scored on the mean, because one seed
-    cannot separate configurations that differ by less than the seed spread.
-  * The winner is re-run at all 17 seeds before being reported.
-  * The full ranking is written out, not just the winner, so the shape of the
-    search space is visible.
-
-Run this after the main experiment, not before: reporting the best of several
-hundred trials as the headline result selects on the quantity being reported.
-
-    python search_hyperparameters.py --trials 300
-    python search_hyperparameters.py --trials 300 --space wide
-    python search_hyperparameters.py --confirm
-
-Writes results/hyperparameter_search/trial<NNN>/seed<n>/ and ranking.csv
+"""Random search over the training hyperparameters, scored on validation error only.
+Run after the main experiment, not before.
 """
 
 import argparse

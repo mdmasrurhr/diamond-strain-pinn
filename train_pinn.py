@@ -1,26 +1,14 @@
 """Train one physics-informed network and write its results.
 
-The study scripts run this file as a subprocess with different flags, so the
-training numerics exist in one place.
-
 Three models share this network and differ only in how each training sample is
 weighted in the loss:
 
-    --model rba   weight follows an exponential moving average of the physics
-                  residual, refreshed every 100 epochs
-    --model sa    weight is a learned parameter, updated by gradient ascent on
-                  the same loss
-    --model mlp   physics terms switched off, leaving a plain network
+    --model rba   weight follows a moving average of the physics residual
+    --model sa    weight is a learned parameter
+    --model mlp   physics terms switched off
 
-The comparison baseline is a different architecture and lives in
-train_baseline.py.
-
-    python train_pinn.py --model rba --seed 42 --dft_pct 100
-
-Writes three files into --results_dir:
-    epoch_log.csv        one row per epoch
-    test_results.csv     one row per test sample
-    metrics_summary.csv  one summary row for the run
+Writes epoch_log.csv, test_results.csv and metrics_summary.csv into
+--results_dir.
 """
 
 # --- command-line options ---
@@ -203,13 +191,7 @@ else:
 os.makedirs(args.results_dir, exist_ok=True)
 
 
-# ============================================================
-# SECTION 2: REPRODUCIBILITY SETUP
-# ============================================================
-# Seeds every RNG (Python, NumPy, PyTorch CPU+GPU) and forces deterministic
-# cuDNN, so the same --seed gives bit-identical results. Note: the data SPLIT is
-# always keyed to --seed, but network INITIALIZATION uses --init_seed when given
-# (else --seed) -- that is how the deep ensemble trains many nets on one split.
+# --- random seeds ---
 
 # Fix all RNG sources so identical seeds produce identical runs.
 # The data split is always keyed to --seed; network initialization uses
@@ -226,15 +208,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
-# ============================================================
-# SECTION 3: DATA LOADING AND FEATURE CONSTRUCTION
-# ============================================================
-# Turns the CSV into ready-to-train arrays: reads the 6 strain inputs and
-# Eg/CBM/VBM targets; splits 70/10/20 STRATIFIED by strain type and keyed to
-# --seed; feature-scales fitting the scaler on TRAIN ONLY (no leakage); picks the
-# labeled subset of size --dft_pct (the data-scarcity lever; 0% = physics only);
-# and builds the near-zero-strain masks the boundary losses need. Returns one
-# `data` dict. Identical to the SA-PINN loader so the two are directly comparable.
+# --- data loading and splitting ---
 
 def compute_raw_features(df):
     # Raw 6 Green-Lagrange strain components as network inputs.
@@ -245,12 +219,9 @@ def compute_raw_features(df):
 
 
 def compute_invariant_features(df):
-    # Oh-symmetric scalar invariant inputs -- the alternative representation the
-    # raw components are compared against. Six invariants so the input width is
-    # unchanged and only the REPRESENTATION differs: the three principal
-    # invariants of the strain tensor plus the cubic-symmetric shear terms.
-    # Every shear enters through an even-degree combination, which is exactly the
-    # sign information this representation is unable to carry.
+    # Six cubic-symmetric invariants of the strain tensor, the alternative to
+    # the raw components. Same input width, so only the representation differs.
+    # Shear enters through even-degree terms only, so shear sign is not carried.
     xx = df["E_xx"].values; yy = df["E_yy"].values; zz = df["E_zz"].values
     xy = df["E_xy"].values; yz = df["E_yz"].values; zx = df["E_zx"].values
     i1 = xx + yy + zz
@@ -401,14 +372,7 @@ def make_iso_synth_points(scaler, n=200, eps_range=0.08):
     return scaler.transform(raw).astype(np.float32)
 
 
-# ============================================================
-# SECTION 4: PHYSICS MODEL
-# ============================================================
-# The analytic theory the loss compares against: physics_cbm (6-valley
-# deformation-potential model) and physics_vbm (Bir-Pikus eigenvalue model),
-# imported -- not redefined -- from physics_terms.py so this model, the SA PINN,
-# and the zero-label solver all use byte-identical equations. The local wrapper
-# just supplies the soft-min sharpness --beta when none is given.
+# --- analytic physics targets ---
 
 # Physics is defined ONCE in physics_terms.py (the single source of truth shared
 # with the SA PINN and the 0% solver baselines). Import the constants and the
@@ -420,14 +384,7 @@ def physics_cbm(strain, beta=None):
     return _physics_cbm_softmin(strain, beta=beta)
 
 
-# ============================================================
-# SECTION 5: NEURAL NETWORK ARCHITECTURE
-# ============================================================
-# A plain MLP: 6 scaled strain components -> [depth x width] hidden layers -> 2
-# outputs (CBM, VBM). The bandgap is computed as Eg = CBM - VBM in forward(), so
-# it is exact by construction. Same architecture as the SA PINN (default SiLU /
-# Xavier / bias=train means); SiLU's smoothness is required by the gradient-BC
-# loss in Section 6.
+# --- network ---
 
 def _make_activation(name):
     return {"silu": nn.SiLU, "relu": nn.ReLU,
@@ -468,7 +425,7 @@ class PINNModel(nn.Module):
     Eg = CBM - VBM is structural, not learned, so the identity holds exactly.
 
     Normalisation, dropout and residual connections are available but off by
-    default; decide_architecture.py measures each of them.
+    default; 06_decide_architecture.py measures each of them.
     """
 
     def __init__(self, cbm_mean, vbm_mean):
@@ -522,17 +479,7 @@ class PINNModel(nn.Module):
         return cbm, vbm, eg
 
 
-# ============================================================
-# SECTION 6: LOSS FUNCTION
-# ============================================================
-# The composite loss the network minimises: a weighted sum of data + physics +
-# boundary terms (same six terms as the SA PINN -- see compute_loss below). What
-# is UNIQUE to this model lives here: the RBA weighting. Each sample has a weight
-# w = 1 + r, where r is an exponential moving average of that sample's normalized
-# physics residual (init_rba_weights starts r at 0 -> w = 1 uniform; update_rba
-# grows r for stubborn samples). Unlike the SA PINN there is no learned min-max
-# step -- the weights follow a fixed rule (gamma, eta). The block right below also
-# applies the --drop_loss ablation by zeroing chosen W_* term weights.
+# --- loss ---
 
 # Loss term weights -- taken from the CLI (defaults equal the hand-set values) so
 # the tuning/sensitivity studies can vary them. The --drop_loss ablation below
@@ -567,13 +514,9 @@ LOSS_W = {
 A_C_REF = -16.342843   # dCBM/dI1 [eV] -- derived from DP constants at zero strain
 A_V_REF = AV           # dVBM/dI1 [eV] -- equals linear hydrostatic term at zero strain
 
-# Isotropic Eg gradient BC -- fitted directly from HSE06-VASP isotropic subset.
-# The physics model's dEg/dI1 = -1.20 eV but DFT gives -2.36 eV (factor-of-2 error)
-# because the isotropic limit couples CBM valley degeneracy and VBM hydrostatic terms
-# in a way the individual DP/BP constants don't reproduce.
-# Quadratic: Eg(I1) = A_EG_ISO_0 + A_EG_ISO_L*I1 + A_EG_ISO_Q*I1^2
-# -> dEg/dI1(I1) = A_EG_ISO_L + 2*A_EG_ISO_Q*I1
-# Enforced on all near-isotropic training points (shear~0, diagonal~equal).
+# Isotropic gap slope, fitted to the reference data rather than taken from the
+# analytic model, which is off by about a factor of two under isotropic strain.
+# Eg(I1) is quadratic, so dEg/dI1 = A_EG_ISO_L + 2*A_EG_ISO_Q*I1.
 A_EG_ISO_L =  -2.3643   # linear isotropic deformation potential [eV] from HSE06 fit
 A_EG_ISO_Q =   1.6653   # quadratic correction [eV] from HSE06 fit
 W_PISO     =   0.5      # weight matching existing gradient BC terms
@@ -597,13 +540,10 @@ def init_rba_weights(N_tr, device):
 
 
 def update_rba(rba_w, model, X_tr_t, eg_phys_tr):
-    # The RBA rule (called periodically from the training loop). For each sample,
-    # measure how far the current prediction is from the physics target, normalize
-    # by the worst residual in the batch (-> 0..1), and blend it into the running
-    # state with an exponential moving average:  r <- gamma*r + eta*normalized_res.
-    # gamma (0.999) = memory of past residuals; eta (0.1) = how fast new residuals
-    # enter. Net effect: persistently hard samples drift to high weight, easy ones
-    # stay near 1. In-place (rba_w[:]=) so the same tensor is reused every update.
+    # Normalise each sample's physics residual by the largest in the batch, then
+    # blend into the running state:  r <- gamma*r + eta*normalised_residual.
+    # Samples that stay hard drift to a high weight; easy ones stay near 1.
+    # Written in place so the same tensor is reused each update.
     model.eval()
     with torch.no_grad():
         _, _, eg_pred = model(X_tr_t)
@@ -613,40 +553,19 @@ def update_rba(rba_w, model, X_tr_t, eg_phys_tr):
     model.train()
 
 
-# ------------------------------------------------------------------------------
-# compute_loss() -- OUTLINE (read this first; full detail at each term below)
-# ------------------------------------------------------------------------------
-# One weighted scalar the network minimises, blending theory (physics) with DFT
-# data so the model stays accurate even with few labels. Same six terms as the
-# SA PINN; the only difference is that the per-sample weight w comes from the RBA
-# rule (w = 1 + EMA residual) instead of a learned parameter. Read top to bottom:
-#
-#   PRELUDE        forward pass; analytic physics targets; RBA per-sample weights
-#   ISO MASK       split isotropic vs non-isotropic (physics unreliable on iso)
-#   TERM 1  L_cbm/L_vbm/L_cons  physics residuals  -> predicted bands vs theory
-#   TERM 2  L_anchor            anchor BC          -> bands sit right at eps=0
-#   TERM 3  L_pcbm/L_pvbm       gradient BC        -> band SLOPES right at eps=0
-#   TERM 4  L_data              supervised loss    -> fit DFT labels (if any)
-#   TERM 5  L_iso_eg            isotropic Eg sup.  -> fit DFT gap on isotropic
-#   TERM 6  L_iso               synthetic iso DP   -> ablation only (off default)
-#   SUM            total = weighted sum of all terms; returned to the optimizer
-#
-# Boundary/physics terms (1-3) need no labels, so they keep working at 0% data.
-# ------------------------------------------------------------------------------
+
+
 def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
                  w, dft_idx_t, cbm_dft_t, vbm_dft_t, i1_scale,
                  eg_tr_t=None, X_iso_t=None, strain_iso_t=None):
-    # PRELUDE: predictions, analytic physics targets, and RBA per-sample weights.
     cbm_pred, vbm_pred, eg_pred = model(X_tr_t)
 
     cbm_phys = physics_cbm(strain_tr_t)
     vbm_phys = physics_vbm(strain_tr_t)
     eg_phys  = cbm_phys - vbm_phys
 
-    # Sample weights: hard samples (large residual) get w > 1, easy samples stay near 1
-    # `w` arrives ready to use: (rba_w + 1) for RBA, softplus(lambda) for SA,
-    # all-ones for the physics-free control. Computing it in the caller is what
-    # lets one loss function serve all three models.
+    # w is supplied by the caller, which is what lets one loss serve all three
+    # models: rba_w + 1 for RBA, softplus(lambda) for SA, all ones for mlp.
 
     # Isotropic mask: shear near zero AND diagonal components nearly equal.
     # The DP/BP physics model has >89 meV systematic error in the isotropic subspace
@@ -702,12 +621,9 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
     else:
         L_data = torch.tensor(0.0, device=X_tr_t.device)
 
-    # Direct Eg supervision on isotropic training samples.
-    # The DP/BP physics model has wrong slope and offset in the isotropic subspace
-    # (verified: dEg/dI1_phys=-1.20 eV vs DFT=-2.36 eV, +61 meV offset).
-    # Physics residual loss is already masked for these samples above.
-    # This term uses DFT Eg labels directly -- active for all isotropic samples
-    # regardless of dft_idx, since isotropic samples are always fully labeled.
+    # Supervise the gap directly on isotropic samples, where the analytic model
+    # is inaccurate and the physics residual above is masked off. This reads the
+    # labels for every isotropic row, not only those in the labelled subset.
     if iso_mask.sum() > 0 and eg_tr_t is not None:
         L_iso_eg = LOSS_W["iso_eg"] * (w[iso_mask] * torch.abs(
             eg_pred[iso_mask] - eg_tr_t[iso_mask]
@@ -733,17 +649,7 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
     return total, eg_phys
 
 
-# ============================================================
-# SECTION 7: TRAINING LOOP
-# ============================================================
-# train() runs `epochs` of full-batch training. Each epoch: ONE network step that
-# descends compute_loss() (AdamW for the first half, then the curvature-aware
-# SOAP optimizer for the second). Every 100 epochs it calls update_rba() to
-# refresh the attention weights (skipped under --no_rba, which keeps them
-# uniform). Every --ckpt_interval epochs it saves the model if VALIDATION MAE
-# improved (selection never uses test -> no leakage). It logs one row per epoch
-# and returns the best checkpoint. (This is the simpler sibling of the SA PINN's
-# two-step min-max loop -- here the weights follow a fixed rule, not a gradient.)
+# --- training loop ---
 
 
 def _to(arr, device):
@@ -986,7 +892,7 @@ def train(data, device):
 
         # Early stopping, off unless --patience is set. Nothing is lost by
         # training on when the best checkpoint is kept, so this is a compute
-        # decision; it is measured, not assumed, by decide_budget.py.
+        # decision; it is measured, not assumed, by 08_decide_budget.py.
         if args.patience > 0 and stale_ckpts >= args.patience:
             print("  early stop at epoch %d: %d checkpoints without improvement"
                   % (ep, stale_ckpts))
@@ -1029,14 +935,7 @@ def train(data, device):
     return model, elapsed, gpu_peak_mb, best_val_mae
 
 
-# ============================================================
-# SECTION 8: EVALUATION ON TEST SET
-# ============================================================
-# Runs the best checkpoint on the held-out test set and computes every reported
-# metric: overall Eg MAE/RMSE/R2, CBM and VBM MAE, and the per-strain-type
-# breakdown. Then writes the two fixed-schema output-contract files,
-# test_results.csv (one row per test sample) and metrics_summary.csv (one summary
-# row), so the aggregation and comparison-table scripts can read them.
+# --- evaluation ---
 
 
 def evaluate(model, data, elapsed, gpu_peak_mb, best_val_mae, device):
@@ -1150,12 +1049,7 @@ def evaluate(model, data, elapsed, gpu_peak_mb, best_val_mae, device):
     return summary
 
 
-# ============================================================
-# SECTION 9: RESOURCE LOGGING
-# ============================================================
-# Records compute usage. Sampling CPU/RAM every epoch would skew the tight loop's
-# timings, so one psutil snapshot is taken at the end and patched into every row
-# of epoch_log.csv. psutil is optional -- without it these fall back to 0.0.
+# --- resource logging ---
 
 try:
     import psutil
@@ -1183,13 +1077,7 @@ def patch_epoch_log_resources(results_dir):
     df.to_csv(path, index=False)
 
 
-# ============================================================
-# SECTION 10: README LOGGER CALL
-# ============================================================
-# The entry point. main() wires the pipeline together: load_and_split() ->
-# train() -> evaluate() -> patch the resource log -> log_run(), which appends a
-# one-line record (params + headline metrics) to RESULTS_LOG.md so every run is
-# traceable. Runs only when executed as a script (the __main__ guard at bottom).
+# --- run log ---
 
 
 

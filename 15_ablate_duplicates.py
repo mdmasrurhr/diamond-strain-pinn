@@ -1,23 +1,4 @@
-"""
-ablate_duplicates.py -- re-run the headline models on distinct strain states only.
-
-check_data.py reports that 72 rows of the dataset are repeats: 24 shear
-states each stored three times, with identical labels. Because the train/test
-split is by row, copies of one state land on both sides, and roughly 5% of test
-rows therefore have an exact twin in training. Those rows are free marks.
-
-It does not distort any comparison -- every model is scored on the same rows --
-but it does make absolute errors slightly optimistic. Rather than argue about
-the size of the effect, this script measures it: the same models, the same
-protocol, on a dataset with the repeats removed.
-
-The main results stay on the full 1,340 rows so they remain comparable with the
-thesis. This is the robustness check that sits beside them.
-
-    python ablate_duplicates.py
-
-Writes data/dft_hy_v7_dedup.csv and results into results/duplicate_ablation/.
-"""
+"""Repeat the sweep on distinct strain states only."""
 
 import argparse
 import os

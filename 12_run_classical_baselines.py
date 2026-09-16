@@ -1,23 +1,4 @@
-"""
-run_classical_baselines.py -- three standard regressors, same data, same splits.
-
-The data-driven model we compare against is a neural network, which invites a
-fair question: is the physics advantage an advantage over data-driven regression
-in general, or only over one particular architecture? So this runs three
-methods that are usually hard to beat on small tabular problems -- gradient
-boosting, a random forest, and a Gaussian process.
-
-Fairness is the point, so each one gets exactly the same treatment as the
-networks: the same split, the same labelled subset at each fraction, the same
-seeds. They predict the bandgap directly rather than through the two band edges,
-which is the easier task and therefore the more favourable setting for them.
-
-No GPU, no training loop -- this finishes in a few minutes.
-
-    python run_classical_baselines.py
-
-Writes results/classical_baselines/{runs,summary}.csv
-"""
+"""Fit random forest, Gaussian process and kernel ridge models for comparison."""
 
 import argparse
 import os

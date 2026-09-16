@@ -1,29 +1,5 @@
-"""
-validate_robustness.py -- what happens when the input is not clean.
-
-The model is trained on DFT strain tensors, which are exact. Anything it is
-actually used for will not be: a measured strain carries uncertainty, and a
-strain inferred from a device geometry carries more. This measures how the
-prediction degrades as the input degrades, which is a property the training
-metrics cannot show.
-
-    noise      Gaussian perturbation of the input strain, at a range of
-               magnitudes. Reported as error against noise level, so the
-               tolerable input uncertainty can be read off directly.
-    symmetry   the crystal is cubic, so permuting the three normal components
-               of a strain state must leave the bandgap unchanged. The model is
-               not told this. How far it drifts under permutation is a measure
-               of what it has actually learned, not of what it was fitted to.
-    sign       shear strain enters the physics through even powers, so g and -g
-               are the same state. Same argument.
-
-Symmetry and sign are stronger checks than noise: they have a known right answer
-that no label supplied, so agreement is evidence of learned structure rather than
-of interpolation.
-
-    python validate_robustness.py --run_dir results/label_sweep/sa/100pct/seed42
-
-Writes results/validate_robustness/robustness.csv
+"""Measure how predictions change under input noise, cubic permutations of the
+normal strain components, and shear sign flips.
 """
 
 import argparse

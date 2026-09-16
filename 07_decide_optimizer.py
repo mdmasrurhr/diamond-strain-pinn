@@ -1,21 +1,5 @@
-"""Measure the optimizer schedule and the settings around it.
-
-Four groups, each varying one thing from the reference configuration.
-
-    arms       AdamW alone, SOAP alone, and the two-phase switch between them.
-               Separates what the second optimizer contributes from what the
-               switch itself contributes.
-    switch     the fraction of the budget spent in the first phase.
-    clip       the gradient clipping norm.
-    sa_clamp   the bound on the self-adaptive log-weights, which limits how
-               far a sample weight can move.
-
-    python decide_optimizer.py                # every group, 3 seeds
-    python decide_optimizer.py --group arms
-    python decide_optimizer.py --full         # all 17 seeds
-    python decide_optimizer.py --report
-
-Writes results/optimizer_study/<group>/<variant>/seed<n>/.
+"""Measure the optimizer schedule, the switch point between its two phases, the
+gradient clipping norm and the sample-weight clamp.
 """
 
 import argparse

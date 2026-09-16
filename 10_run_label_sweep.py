@@ -1,26 +1,4 @@
-"""
-run_label_sweep.py -- the headline experiment: accuracy vs labelled data.
-
-Trains every model at every labelled fraction, at every seed. This is the run
-that produces the data-efficiency curve and the full-data accuracy numbers;
-everything in 06-11 is a variation on it.
-
-    python run_label_sweep.py              # the whole grid
-    python run_label_sweep.py --quick      # 3 seeds, for a smoke test
-
-Grid
-    models     sa, rba  (physics-informed)
-               mlp      (same network, physics removed -- the control)
-               shi      (the published data-driven baseline)
-    fractions  0,1,2,5,10,25,50,75,100 percent of the 938-state training pool
-    seeds      42-58
-
-The 0% fraction trains on the physics terms alone, so it applies only to the
-physics-informed models: mlp and shi have nothing to learn from without labels.
-
-Results land in results/label_sweep/<model>/<pct>pct/seed<n>/.
-Re-running skips jobs that already finished.
-"""
+"""Train every model at every labelled-data fraction. This is the main experiment."""
 
 import argparse
 import os

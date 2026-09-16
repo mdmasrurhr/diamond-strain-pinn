@@ -1,20 +1,7 @@
-# ==============================================================================
-# train_baseline.py -- the data-driven baseline, reproduced from Shi et al.
-#
-# Kept as its own file on purpose. It is a reproduction of someone else's
-# architecture and training protocol, so it must not drift when the PINN changes;
-# separating it makes that impossible by construction.
-#
-# Usage
-#   python train_baseline.py --data_csv data/dft_hy_v7.csv --seed 42 --dft_pct 100
-#
-# Writes the same three CSVs as train_pinn.py, so the collectors treat them
-# identically.
-# ==============================================================================
-
-# ============================================================
-# SECTION 1: IMPORTS AND ARGUMENT PARSING
-# ============================================================
+"""Train one purely data-driven network, reproduced from the published architecture,
+and write its results.
+"""
+# --- imports and argument parsing ---
 import argparse
 import os
 import random
@@ -66,9 +53,7 @@ def _model_name_from_mode(mode):
     return "Shi_ANN_DeltaML" if mode == "delta_ml" else "Shi_ANN"
 
 
-# ============================================================
-# SECTION 2: REPRODUCIBILITY SETUP
-# ============================================================
+# --- reproducibility setup ---
 
 def setup_reproducibility(seed, device_str, results_dir, args):
     random.seed(seed)
@@ -101,10 +86,7 @@ def setup_reproducibility(seed, device_str, results_dir, args):
     return device
 
 
-# ============================================================
-# SECTION 3: DATA LOADING AND FEATURE CONSTRUCTION
-# ============================================================
-# Shi ANN uses raw 6 strain components -- NOT the Oh-symmetric invariants.
+# --- data loading and feature construction ---
 
 def _norm_strain_type(s):
     s = str(s).lower().strip()
@@ -199,9 +181,7 @@ def load_and_split(data_csv, pbe_csv, seed, dft_pct, results_dir,
     return data
 
 
-# ============================================================
-# SECTION 4: NEURAL NETWORK ARCHITECTURE
-# ============================================================
+# --- neural network architecture ---
 
 def build_model(output_mean, device):
     """
@@ -494,9 +474,7 @@ def run_delta_ml(data, args, results_dir, device):
     return combined, elapsed, gpu_peak, val_mae
 
 
-# ============================================================
-# SECTION 7: EVALUATION ON TEST SET
-# ============================================================
+# --- evaluation on test set ---
 
 def _per_strain_mae(eg_true, eg_pred, strain_types):
     groups = {"isotropic": [], "uniaxial": [], "biaxial": [],
@@ -613,9 +591,7 @@ def evaluate_and_write(model_or_combined, data, args, results_dir,
     return row
 
 
-# ============================================================
-# SECTION 8: RESOURCE LOGGING
-# ============================================================
+# --- resource logging ---
 
 class ResourceLogger:
     def __init__(self, path, device):
@@ -640,9 +616,7 @@ class ResourceLogger:
         self._stop.set()
 
 
-# ============================================================
-# SECTION 9: README LOGGER CALL
-# ============================================================
+# --- readme logger call ---
 
 def main():
     args = parse_args()

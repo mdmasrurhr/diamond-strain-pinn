@@ -1,28 +1,5 @@
-"""
-validate_explainability.py -- is it right for the right reason?
-
-A network minimises whatever loss it is given by whatever route is cheapest. The
-cheap route is not always the physical one, and the metrics cannot tell the
-difference: a model reading a spurious correlation and a model reading the
-physics produce the same test MAE.
-
-Here the right answer is known independently, which makes this stronger than
-attribution usually is. Deformation-potential theory says exactly how the band
-edges must respond to strain:
-
-    dEg/dI1     the hydrostatic response. Set by the deformation potentials, and
-                known from the analytic model in physics.py.
-    shear       shear enters through even powers, so the first derivative with
-                respect to a shear component must vanish at zero shear.
-    symmetry    dEg/dExx, dEg/dEyy and dEg/dEzz must be equal at an isotropic
-                point, because the three axes are equivalent in a cubic crystal.
-
-So this does not just report which input the model leans on. It compares the
-model's own derivatives against values the physics fixes in advance.
-
-    python validate_explainability.py --run_dir results/label_sweep/sa/100pct/seed42
-
-Writes results/validate_explainability/attribution.csv
+"""Compare a trained model's input derivatives against the values
+deformation-potential theory fixes in advance.
 """
 
 import argparse
@@ -129,11 +106,11 @@ def main():
     gi_mean = float(gi[:, :3].sum(axis=1).mean())
     print("\nHYDROSTATIC SLOPE  dEg/dI1 = %.3f eV" % gi_mean)
     print("  This is the deformation-potential combination the analytic model")
-    print("  fixes. Compare it with the fitted value from fit_physics_constants.py;")
+    print("  fixes. Compare it with the fitted value from 03_fit_physics_constants.py;")
     print("  agreement is evidence the network learned the physics rather than")
     print("  a curve that happens to pass through the same points.")
     rows.append(dict(check="hydrostatic_slope", item="dEg/dI1",
-                     value=round(gi_mean, 4), expected="see fit_physics_constants.py",
+                     value=round(gi_mean, 4), expected="see 03_fit_physics_constants.py",
                      note=""))
 
     out = C.results_dir("validate_explainability")

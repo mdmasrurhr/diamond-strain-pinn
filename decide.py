@@ -1,13 +1,4 @@
-"""Read finished runs and apply the rules that turn results into a choice.
-
-jobs.py launches runs; this reads their metrics_summary.csv files, aggregates
-over seeds, and applies the selection rules. The rules live here so that
-"smallest within one standard deviation of the best" means the same thing in
-every study.
-
-Each function returns both the chosen row and the table it was chosen from, so
-the calling script can print the evidence alongside the decision.
-"""
+"""Read finished runs and apply the rules that select one configuration."""
 
 import os
 

@@ -1,27 +1,4 @@
-"""Compare ways of splitting the data into train, validation and test sets.
-
-A split decides what question the reported error answers, so five schemes are
-run and reported separately rather than one being assumed.
-
-    stratified   every deformation family appears in training; measures
-                 accuracy inside the sampled region
-    random       same proportions without stratification; shows what
-                 stratification is worth
-    kfold        5-fold cross-validation; uses all the data, costs 5x
-    group        one deformation family held out entirely; measures accuracy
-                 on a kind of deformation never seen
-    magnitude    train below a strain threshold and test above it; measures
-                 accuracy beyond the strain range seen
-
-The last two are expected to give much larger errors. They bound what the model
-can be used for.
-
-    python decide_split.py              # 3 seeds
-    python decide_split.py --full       # all 17 seeds
-    python decide_split.py --report     # read finished runs and compare
-
-Writes results/split_study/<scheme>/seed<n>/.
-"""
+"""Compare five ways of splitting the data into train, validation and test sets."""
 
 import argparse
 import os

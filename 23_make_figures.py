@@ -1,13 +1,4 @@
-"""Draw the figures from the collected results.
-
-style.py sets the appearance and assigns each model a fixed colour by name, so
-a model looks the same in every figure.
-
-    python make_figures.py                     # every figure
-    python make_figures.py --only scarcity parity
-
-Writes results/figures/*.pdf
-"""
+"""Draw the figures from the collected results."""
 
 import argparse
 import os

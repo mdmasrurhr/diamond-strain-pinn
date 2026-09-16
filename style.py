@@ -1,17 +1,9 @@
-"""Shared appearance settings for every figure.
+"""Shared appearance settings for figures.
 
-apply() sets the plotting defaults once. series(name) returns the colour,
-marker and line style for a model, keyed by name so the same model looks the
-same in every figure.
-
+apply() sets the plotting defaults. series(name) returns the colour, marker and
+line style for a model, keyed by name so a model looks the same in every figure.
 The palette is the Okabe-Ito set, which stays distinguishable under the common
-forms of colour blindness. Lightness is spread across the series so they remain
-separable in greyscale, and every series also differs in marker and line style,
-so colour is never the only thing distinguishing them.
-
-    import style
-    style.apply()
-    ax.plot(x, y, **style.series("SA_PINN"))
+forms of colour blindness and in greyscale.
 """
 
 # ----------------------------------------------------------------- palette

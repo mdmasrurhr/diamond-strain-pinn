@@ -1,16 +1,4 @@
-"""Record what is needed to reproduce a set of runs.
-
-Writes the interpreter, package versions, hardware, dataset checksum and seed
-policy to a manifest file.
-
-Run it before a long study and again afterwards. If the two manifests differ,
-the runs span a change of environment and are not a single experiment.
-
-    python check_environment.py
-    python check_environment.py --compare results/environment/env_manifest.json
-
-Writes results/environment/env_manifest.json
-"""
+"""Record the interpreter, package versions, hardware and dataset checksum of a run."""
 
 import argparse
 import hashlib

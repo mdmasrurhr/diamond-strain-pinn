@@ -1,16 +1,11 @@
 """Analytic model of how strain moves the band edges of diamond.
 
-Two closed-form models, one per band edge, plus the gap they define:
-
-    CBM(E)  six <100> conduction valleys from a deformation-potential
-            expansion; the band edge is the lowest valley
+    CBM(E)  lowest of six <100> conduction valleys, from a deformation-potential
+            expansion
     VBM(E)  largest eigenvalue of a 3x3 Bir-Pikus Hamiltonian
     Eg(E)   CBM(E) - VBM(E)
 
-Both the trainer and the physics-only solver import this module, so they use
-identical equations and constants.
-
-Units: strain is dimensionless (Green-Lagrange), energies are in eV.
+Strain is dimensionless (Green-Lagrange), energies are in eV.
 """
 
 import json
@@ -21,7 +16,7 @@ import torch
 from scipy.optimize import least_squares
 
 # The 13 constants below are fitted once to HSE06 reference data and then held
-# fixed. Regenerate them with:  python fit_physics_constants.py --freeze
+# fixed. Regenerate them with:  python 03_fit_physics_constants.py --freeze
 # The fit uses the training fold only, so the test fold stays unseen.
 
 # --- CBM deformation-potential constants (eV) ---
@@ -45,7 +40,7 @@ D_BP   = -1.9671238909825762e-07
 # --- optional per-run constant override ---
 # Setting the environment variable PHYSICS_CONST_JSON to a JSON file of
 # {name: value} replaces any subset of the constants above when this module is
-# imported. run_matched_prior.py uses it to give each run a set fitted on only
+# imported. 11_run_matched_prior.py uses it to give each run a set fitted on only
 # that run's labelled rows. With the variable unset the values above are used.
 
 CONSTANT_NAMES = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",
@@ -152,15 +147,10 @@ def physics_eg(strain, beta=None):
     return physics_cbm(strain, beta=beta) - physics_vbm(strain)
 
 
-# ==============================================================================
-# NUMPY MIRROR + FITTERS
-#
-# The functions above are torch, because training needs gradients through them.
-# Fitting the constants is a scipy least-squares problem, so the same two
-# equations are repeated here in numpy. They must stay in step: fit_physics_constants.py
-# checks that re-fitting reproduces the frozen constants above, which would fail
-# immediately if these drifted from the torch versions.
-# ==============================================================================
+# --- numpy versions, used for fitting ---
+# The functions above are torch, because training differentiates through them.
+# Fitting is a scipy least-squares problem, so the same equations appear here in
+# numpy. 03_fit_physics_constants.py checks the two agree.
 
 CBM_KEYS = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2"]
 VBM_KEYS = ["VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]

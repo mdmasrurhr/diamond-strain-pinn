@@ -1,13 +1,5 @@
-"""Measure what the model costs to train and to run.
-
-    inference   time per prediction, single and batched, on GPU and CPU
-    memory      parameter count and weight size
-    training    wall-clock per run, read from finished runs
-    payoff      how many predictions repay the cost of training
-
-    python validate_performance.py --run_dir results/label_sweep/sa/100pct/seed42
-
-Writes results/performance/operational.csv
+"""Measure inference time, memory use, training cost, and how many predictions
+repay the cost of training.
 """
 
 import argparse

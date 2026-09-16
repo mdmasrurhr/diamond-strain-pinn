@@ -1,16 +1,5 @@
-"""
-check_data.py -- read the dataset, verify it is what we expect, describe it.
-
-Run this first. It proves the CSV on disk is the one every later script assumes:
-right number of rows, right columns, no missing values, the expected mix of
-deformation families, and a train/test split that does not leak near-duplicate
-strain states across the boundary.
-
-It trains nothing and changes nothing.
-
-    python check_data.py
-
-Writes results/data_checks/dataset_summary.csv and prints the same table.
+"""Check the dataset: row count, columns, missing values, deformation family mix and
+duplicate strain states.
 """
 
 import numpy as np
@@ -107,7 +96,7 @@ def main():
           % (np.mean(twins), n_te, 100.0 * np.mean(twins) / n_te,
              min(twins), max(twins), len(C.SEEDS)))
     print("  -> every model is scored on the same rows, so comparisons are fair,")
-    print("     but absolute errors are slightly optimistic. ablate_duplicates.py")
+    print("     but absolute errors are slightly optimistic. 15_ablate_duplicates.py")
     print("     re-runs the headline models on distinct states only.")
 
     summary = pd.DataFrame(rows)

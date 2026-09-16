@@ -1,18 +1,5 @@
-"""Refit the physics constants on each run's own labelled subset.
-
-In the main experiment the constants are fitted once on the whole dataset and
-then frozen, so at 1% labels the supervised term sees nine states while the
-physics term carries information from all of them. This removes that asymmetry:
-for each seed and fraction the 13 constants are refitted on that run's labelled
-rows only, using the same split and subset draw as the trainer.
-
-The difference between this and the main experiment is the part of the
-low-label result that comes from the reused calibration.
-
-    python run_matched_prior.py
-    python run_matched_prior.py --quick
-
-Writes results/matched_prior/<model>/<pct>pct/seed<n>/.
+"""Repeat the sweep with the physics constants refitted on each run's own labelled
+subset, so the physics sees no more labels than the data term does.
 """
 
 import argparse

@@ -1,25 +1,4 @@
-"""
-ablate_design_choices.py -- vary one design choice at a time and retrain.
-
-Where 06 asks which parts of the *loss* matter, this asks which parts of the
-*setup* matter: how samples are weighted, which optimizer runs, how big the
-network is, which activation, and whether the network sees raw strain components
-or symmetry-invariant scalars.
-
-Every variant differs from the reference in exactly one respect, so the
-difference in error is attributable to that one choice. Groups:
-
-    weighting        uniform weights, frozen SA weights, RBA vs SA
-    optimizer        AdamW only (no SOAP phase), plain Adam
-    architecture     narrower / wider / shallower / deeper
-    activation       relu, tanh, gelu against the default silu
-    representation   Oh-invariant scalars instead of the six raw components
-
-    python ablate_design_choices.py                    # every group
-    python ablate_design_choices.py --group weighting  # just one
-
-Results in results/design_ablation/<variant>/<pct>pct/seed<n>/.
-"""
+"""Vary one design choice at a time and retrain."""
 
 import argparse
 

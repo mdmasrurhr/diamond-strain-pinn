@@ -1,19 +1,5 @@
-"""Measure which network shape and which layer types to use.
-
-Two passes, each varying one thing at a time from a reference configuration so
-every difference is attributable.
-
-    capacity   depth x width over a grid. Selects the smallest network whose
-               error is within one standard deviation of the best.
-    elements   normalisation, dropout, residual connections and non-uniform
-               layer widths, each on its own.
-
-    python decide_architecture.py                 # both passes, 3 seeds
-    python decide_architecture.py --pass capacity
-    python decide_architecture.py --full          # all 17 seeds
-    python decide_architecture.py --report
-
-Writes results/architecture_study/<pass>/<variant>/seed<n>/.
+"""Measure network depth and width, and whether normalisation, dropout, residual
+connections or non-uniform layer widths improve the model.
 """
 
 import argparse
