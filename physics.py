@@ -229,16 +229,28 @@ def fit_vbm(strain, y):
     def full_residual(params):
         return vbm_numpy(strain, *params) - y
 
+    lower = [-20.0, -60.0, -500.0, -30.0, -500.0, -50.0]
+    upper = [40.0, 60.0, 500.0, 30.0, 500.0, 50.0]
+
+    # The linear pass uses the same bounds as the full fit, on the four
+    # parameters it varies. Leaving it unbounded lets it return a starting point
+    # the full fit would reject, which raises rather than fitting.
+    linear_lower = [lower[0], lower[1], lower[3], lower[5]]
+    linear_upper = [upper[0], upper[1], upper[3], upper[5]]
     linear_start = [8.8, -15.0, -3.0, -16.8]
     linear_fit = least_squares(linear_residual, linear_start, method="trf",
+                               bounds=(linear_lower, linear_upper),
                                max_nfev=100000).x
 
     # Re-order the linear answer into the full 6-parameter layout, with the two
     # quadratic terms (a_v2, b2) starting at zero.
     vbm_0, a_v, b, d_bp = linear_fit
     start = [vbm_0, a_v, 0.0, b, 0.0, d_bp]
-    lower = [-20.0, -60.0, -500.0, -30.0, -500.0, -50.0]
-    upper = [40.0, 60.0, 500.0, 30.0, 500.0, 50.0]
+    # Nudge strictly inside the bounds: least_squares rejects a start that sits
+    # exactly on one.
+    span = [u - l for l, u in zip(lower, upper)]
+    start = [min(max(v, l + 1e-9 * w), u - 1e-9 * w)
+             for v, l, u, w in zip(start, lower, upper, span)]
     fit = least_squares(full_residual, start, method="trf",
                         bounds=(lower, upper), max_nfev=100000)
     return fit.x
