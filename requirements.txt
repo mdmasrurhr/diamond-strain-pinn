@@ -1,0 +1,19 @@
+# Tested with Python 3.12. Versions below are the ones used for the published
+# runs; 00_check_env.py records the exact environment of any run it is given.
+#
+#   pip install -r requirements.txt
+#
+# PyTorch: install the build that matches your CUDA version if you want GPU
+# training. The CPU build works but a full campaign is impractical on CPU.
+# See https://pytorch.org/get-started/locally/
+
+numpy>=2.0
+pandas>=2.0
+scipy>=1.13
+scikit-learn>=1.5
+torch>=2.4
+matplotlib>=3.8
+
+# Optional. Without it, the per-epoch CPU and RAM columns of epoch_log.csv
+# are written as 0.0 and nothing else changes.
+psutil
