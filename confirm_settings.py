@@ -1,29 +1,19 @@
-"""
-confirm_settings.py -- re-confirm the stage-1 picks under the refit physics.
+"""Re-run a small set of configurations to confirm the chosen settings still hold.
 
-Stage 1 ran with physics constants calibrated to the OLD strain frame -- every
-arm shared the same broken prior, so the relative orderings are expected to
-survive the refit, but "expected" is not a basis for a two-day campaign. This
-re-runs the smallest set of arms that carries each decision, at the adopted
-budget, under the corrected constants:
+The settings were selected in separate studies. This trains the few
+configurations that carry each choice, at the full budget, and checks the
+orderings are unchanged before a long run starts.
 
-    architecture   d8_w64 (adopted), d8_w200 (best), d7_w100, d5_w100 (thesis)
-    optimizer      soap-only and adamw-only against the adopted two-phase base
-    SA variant     the self-adaptive model on the new backbone, since its
-                   sa_lr was tuned on the old one
+    architecture   the chosen network against the best and the runner-up
+    optimizer      SOAP alone and AdamW alone against the two-phase default
+    weighting      the self-adaptive variant on the chosen network
 
-    python confirm_settings.py            # run the 21 jobs
-    python confirm_settings.py --guard    # pass/fail verdict; exit 1 on fail
+    python confirm_settings.py            # run the configurations
+    python confirm_settings.py --guard    # pass/fail verdict, exit 1 on fail
 
---guard gives a pass/fail verdict and exits non-zero on failure, so it can gate
-a long campaign in a shell script. It checks the DECISIONS, not the exact
-numbers:
+--guard exits non-zero on failure so it can gate a long run from a shell script.
 
-    1. the adopted d8_w64 is at least as good as the thesis d5_w100
-    2. AdamW-only is still far worse; two-phase and SOAP-only still tie
-    3. the SA model trains sanely on the new backbone
-
-Results in results/confirm_settings/<variant>/seed<n>/.
+Writes results/settings_confirmation/<variant>/seed<n>/.
 """
 
 import argparse

@@ -1,13 +1,10 @@
-"""
-check_environment.py -- record what it takes to reproduce these numbers.
+"""Record what is needed to reproduce a set of runs.
 
-Reproducibility is not a claim you make, it is a file you write. This records
-the interpreter, the package versions, the hardware, the dataset checksum and
-the seed policy, so that a number in the paper can be traced to the environment
-that produced it.
+Writes the interpreter, package versions, hardware, dataset checksum and seed
+policy to a manifest file.
 
-Run it before the campaign and again after. If the two differ, the campaign
-straddled an environment change and the results are not a single experiment.
+Run it before a long study and again afterwards. If the two manifests differ,
+the runs span a change of environment and are not a single experiment.
 
     python check_environment.py
     python check_environment.py --compare results/environment/env_manifest.json

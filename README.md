@@ -127,11 +127,6 @@ CBM_eV VBM_eV                    conduction and valence band edges
 strain_type                      which family of deformation this is
 ```
 
-`data/dft_hy_v7.csv` is an earlier version of the same states, kept only so that
-previously published numbers can be reproduced. It contains a known error in the
-strain tensors and should not be used for new work; `data/constants_v7frame.json`
-holds the physics constants that go with it.
-
 ## What every run writes
 
 Three files with fixed column names, so any script can read any run:
@@ -164,8 +159,6 @@ of which labels are visible. The thread count is pinned in `config.py`, because
 the number of threads changes the order in which floating-point sums are
 accumulated and that is enough to move the baseline by a few tenths of a
 percent.
-
-`CHECKLIST.md` lists every element of the model with the evidence behind it.
 
 ## Citation
 

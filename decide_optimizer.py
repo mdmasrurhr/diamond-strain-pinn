@@ -1,29 +1,21 @@
-"""
-decide_optimizer.py -- close the gaps in the optimizer evidence.
+"""Measure the optimizer schedule and the settings around it.
 
-The optimizer family is already well evidenced: AdamW -> SOAP beats Adam by 20
-meV, RMSprop by 36, SGD by 157 and L-BFGS by 237. Nothing here disputes that.
+Four groups, each varying one thing from the reference configuration.
 
-What is missing is attribution and the surrounding settings.
-
-    arms        AdamW-only, SOAP-only, and the two-phase switch. Dropping SOAP
-                costs +31 meV, the largest single effect in the whole ablation
-                table -- but with no SOAP-only arm that could be SOAP itself or
-                the switch, and the paper currently implies the second while
-                evidencing only the first. One run per seed closes it.
-    switch      where to switch. Fixed at 0.5 and never screened on its own.
-    clip        gradient clip norm. Varied inside the hyperparameter search,
-                never screened, so its flatness is assumed rather than shown.
-    sa_clamp    the [-8, 8] bound on the self-adaptive log-weights. It bounds
-                how far the adaptation can go, which makes it a claim of the
-                work by the project's own taxonomy, and it has no evidence.
+    arms       AdamW alone, SOAP alone, and the two-phase switch between them.
+               Separates what the second optimizer contributes from what the
+               switch itself contributes.
+    switch     the fraction of the budget spent in the first phase.
+    clip       the gradient clipping norm.
+    sa_clamp   the bound on the self-adaptive log-weights, which limits how
+               far a sample weight can move.
 
     python decide_optimizer.py                # every group, 3 seeds
     python decide_optimizer.py --group arms
-    python decide_optimizer.py --full --group arms   # 17 seeds, for the paper
+    python decide_optimizer.py --full         # all 17 seeds
     python decide_optimizer.py --report
 
-Results in results/optimizer_study/<group>/<variant>/seed<n>/.
+Writes results/optimizer_study/<group>/<variant>/seed<n>/.
 """
 
 import argparse
@@ -36,9 +28,8 @@ import jobs
 PCT = 100
 
 GROUPS = {
-    # The three-arm comparison the framework asks for. Each arm gets the
-    # hyperparameters belonging to its own optimizer, so SOAP-only is compared
-    # at SOAP's settings rather than at AdamW's.
+    # Each arm uses the hyperparameters belonging to its own optimizer, so
+    # SOAP alone runs at SOAP's settings rather than at AdamW's.
     "arms": {
         "two_phase":  ("rba", []),
         "adamw_only": ("rba", ["--optimizer", "adamw"]),
@@ -108,7 +99,7 @@ def report():
                 print("  adopted %s is the best in this screen" % adopted)
 
         if g == "arms":
-            # The attribution the paper needs, stated explicitly.
+            # Split the total effect between the optimizer and the switch.
             m = dict(zip(agg.variant, agg.test_mae_meV_mean))
             if {"two_phase", "adamw_only", "soap_only"} <= set(m):
                 print("\n  ATTRIBUTION")
@@ -120,8 +111,7 @@ def report():
                 print("    attributable to SOAP itself : %+8.2f meV" % gain_soap)
                 print("    attributable to the switch  : %+8.2f meV" % gain_switch)
                 if gain_switch <= 0:
-                    print("    -> the switch buys nothing beyond SOAP; the paper should")
-                    print("       say SOAP, not the two-phase schedule.")
+                    print("    -> the switch adds nothing beyond SOAP alone")
                 else:
                     print("    -> both contribute; the two-phase claim is supported.")
         agg["group"] = g

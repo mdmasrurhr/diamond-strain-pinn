@@ -1,19 +1,12 @@
-"""
-make_figures.py -- every figure for the paper, from the collected results.
+"""Draw the figures from the collected results.
 
-One script, one style module, one colour per model. The thesis had eight figure
-scripts each setting their own rcParams and one assigning colour by position in a
-loop, so the same model changed colour between figures. Here `style.py` decides
-the look and `style.series(model)` decides the colour, keyed by name.
+style.py sets the appearance and assigns each model a fixed colour by name, so
+a model looks the same in every figure.
 
-Each figure below states the claim it supports. A figure that supports no claim
-should not be drawn, and a claim with no figure is an assertion -- so this list
-is meant to be read against the paper's claims, not extended for its own sake.
-
-    python make_figures.py                # every figure
+    python make_figures.py                     # every figure
     python make_figures.py --only scarcity parity
 
-Writes results/make_figures/*.pdf
+Writes results/figures/*.pdf
 """
 
 import argparse

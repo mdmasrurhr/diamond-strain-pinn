@@ -1,31 +1,17 @@
-# ============================================================
-# physics.py
-#
-# OBJECTIVE
-#   Single source of truth for the analytic physics the Hybrid PINNs are
-#   constrained by. The CBM deformation-potential model and the VBM
-#   Bir-Pikus model live here ONCE so that the trainable models
-#   (m_rba_pinn, m_sa_pinn) and the zero-label solver baselines
-#   (scripts/solver/solver_physics.py) call the *identical* equations and
-#   constants. This is what makes the 0% physics-only comparison
-#   apples-to-apple: the solver is not a re-derivation, it is the same code.
-#
-# ALGORITHM
-#   CBM(E): six <100> conduction-valley energies from an extended
-#     deformation-potential expansion (hydrostatic XI_D, uniaxial XI_U via
-#     the per-axis term, quadratic XI_Q, cross term XI_C, second invariant
-#     XI_Q2, shear splitting 2*XI_UP). The physical CBM is their minimum;
-#     a log-sum-exp soft-minimum (sharpness beta) gives a differentiable
-#     approximation. Eg uses the hard minimum by default (beta=None).
-#   VBM(E): largest eigenvalue of the extended 3x3 Bir-Pikus Hamiltonian
-#     (hydrostatic AV/AV2, deviatoric B_BP/B2_BP, shear D_BP).
-#   Eg(E) = CBM(E) - VBM(E).
-#
-# UNITS: strain dimensionless (Green-Lagrange); energies in eV.
-# Constants were calibrated once to the HSE06-VASP data and are FROZEN;
-# do not edit here without re-stating it in the thesis (these are the
-# numbers the PINN physics loss and the 0% solver both depend on).
-# ============================================================
+"""Analytic model of how strain moves the band edges of diamond.
+
+Two closed-form models, one per band edge, plus the gap they define:
+
+    CBM(E)  six <100> conduction valleys from a deformation-potential
+            expansion; the band edge is the lowest valley
+    VBM(E)  largest eigenvalue of a 3x3 Bir-Pikus Hamiltonian
+    Eg(E)   CBM(E) - VBM(E)
+
+Both the trainer and the physics-only solver import this module, so they use
+identical equations and constants.
+
+Units: strain is dimensionless (Green-Lagrange), energies are in eV.
+"""
 
 import json
 import os
@@ -34,30 +20,9 @@ import numpy as np
 import torch
 from scipy.optimize import least_squares
 
-# CONSTANT PROVENANCE (refit 2026-09-15; produced by fit_physics_constants.py --freeze)
-# Data     : dft_hy_v9.csv -- deduplicated, CORRECTED strain frame. The previous
-#            constants were calibrated on the v7 rotated-frame strain and score
-#            845.6 meV on v9 (vs 174.5 on v7); they are preserved for
-#            reproduction in data/constants_v7frame.json and can be restored per
-#            run via PHYSICS_CONST_JSON.
-# Method   : scipy least_squares (trf, bounded), via physics.fit_cbm / fit_vbm.
-# Split    : fitted on the SEED-42 TRAINING FOLD ONLY (70%, stratified) -- the
-#            old fits used every row, which put each downstream test fold inside
-#            the calibration data. Held-out physics-only Eg MAE: 174.9 meV
-#            (fold 42), 162.5 (43), 173.1 (44).
-# Stability: linear terms move < 0.13 eV across folds; the quadratic/cross terms
-#            absorb residual variance and move more (XI_Q 2.3, B2_BP 10.7 eV) --
-#            quote the linear terms as physics, treat the quadratics as fit.
-# XI_U     : +24.33 eV -- right sign and order against literature +16.6 at last.
-#            The v7-frame fit had it PINNED at a -10 bound with the wrong sign;
-#            that was the rotated frame, not the physics.
-# D_BP     : ~0. NOT a discovery of vanishing trigonal coupling. The shear VBM
-#            labels imply |d| ~ 3 eV from raw slopes, but on held-out shear
-#            states d=0 beats the literature -5.4 by 24 meV -- the fit is
-#            responding to the documented shear-label inconsistency (106 meV
-#            between symmetry-equivalent states; k-sampling). Kept free, lands
-#            at 0, disclosed. See the paper's supplementary material.
-# Audit    : re-run fit_physics_constants.py to check parity against these numbers.
+# The 13 constants below are fitted once to HSE06 reference data and then held
+# fixed. Regenerate them with:  python fit_physics_constants.py --freeze
+# The fit uses the training fold only, so the test fold stays unseen.
 
 # --- CBM deformation-potential constants (eV) ---
 CBM_0 = 14.534980535287007
@@ -77,15 +42,11 @@ B2_BP  = 70.41960340594974
 D_BP   = -1.9671238909825762e-07
 
 
-# --- Optional per-run constant override -------------------------------------
-# The 13 constants above are the frozen calibration. Two studies need a
-# different set: the label-matched prior fits constants on only the labelled
-# rows of each run, and reproducing the thesis needs the old-frame values in
-# data/constants_v7frame.json.
-#
+# --- optional per-run constant override ---
 # Setting the environment variable PHYSICS_CONST_JSON to a JSON file of
-# {name: value} replaces any subset of them when this module is imported. With
-# the variable unset the frozen values are used, so normal runs are unaffected.
+# {name: value} replaces any subset of the constants above when this module is
+# imported. run_matched_prior.py uses it to give each run a set fitted on only
+# that run's labelled rows. With the variable unset the values above are used.
 
 CONSTANT_NAMES = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",
                   "VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]
@@ -104,8 +65,7 @@ def _load_constant_overrides():
     return overrides
 
 
-# Applied one name at a time so that an unknown key is an error, not a silently
-# ignored typo that would leave a run using constants nobody intended.
+# Applied one name at a time so an unknown key raises instead of being ignored.
 for _name, _value in _load_constant_overrides().items():
     if _name == "CBM_0":
         CBM_0 = float(_value)

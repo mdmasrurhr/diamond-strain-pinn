@@ -1,29 +1,22 @@
-"""
-check_sanity.py -- the failures that do not raise an exception.
+"""Checks for faults that do not raise an exception.
 
-A broken training script usually still runs. The loss decreases, the metrics
-look plausible, and nothing tells you the model is learning the wrong thing.
-These are the checks that catch that class of failure. They are cheap, and they
-belong BEFORE the campaign, not after it.
+A broken training setup usually still runs to completion with a plausible
+looking loss curve. Each check below targets one way that can happen.
 
-    overfit_batch   can the network memorise 8 samples? If it cannot drive the
-                    error on eight points to near zero, the architecture or the
-                    gradient path is broken and no amount of data will fix it.
-                    This is the single most informative minute in the project.
+    overfit_batch   train on 8 samples only. If the error does not fall to
+                    near zero, the network or the gradient path is broken.
     gradients       per-layer gradient norms at initialisation. A layer whose
-                    gradient is orders of magnitude smaller than its neighbours
-                    is not learning, and the loss curve will not say so.
-    leakage         the scaler must see the training fold only, and no test row
-                    may appear in training. Proven by construction here rather
-                    than asserted in prose.
-    duplicates      exact-duplicate strain states split across train and test
-                    are memorisation dressed as generalisation. Section 01 found
-                    72 such rows in v7; this refuses to let that pass silently.
-    label_shuffle   train on shuffled labels. A model that still scores well is
-                    reading something other than the labels. Performance must
-                    collapse to roughly the spread of the target.
+                    gradient is orders of magnitude smaller than its
+                    neighbours is not learning.
+    leakage         confirms the scaler saw the training fold only and that no
+                    row appears in two folds.
+    duplicates      counts strain states that appear more than once. Copies
+                    split across train and test inflate the score.
+    label_shuffle   train on shuffled labels. The error must collapse to the
+                    spread of the target; anything better means the model is
+                    reading something other than the labels.
 
-    python check_sanity.py              # everything except label_shuffle
+    python check_sanity.py              # all except label_shuffle
     python check_sanity.py --all        # including the shuffle control
     python check_sanity.py --check leakage duplicates
 
@@ -132,11 +125,9 @@ def check_leakage(rows):
     rows.append(dict(check="scaler_leak", value=float("%.3e" % gap), unit="",
                      passed=ok_scaler, note="scaler mean must differ from full-data mean"))
 
-    # Folds must be disjoint in their INPUTS. Comparing targets instead would be
-    # wrong here and it is worth saying why: only 528 distinct Eg values occur
-    # among 1,340 rows, because symmetry-equivalent deformations have the same
-    # bandgap by construction. Shared targets are physics; shared inputs are
-    # leakage, and only the second is a defect.
+    # Compare inputs, not targets. Symmetry-equivalent deformations share a
+    # bandgap by construction, so repeated targets are expected; repeated
+    # inputs across folds are not.
     tr = set(map(tuple, np.round(data["X_tr"], 6)))
     te = set(map(tuple, np.round(data["X_te"], 6)))
     va = set(map(tuple, np.round(data["X_va"], 6)))

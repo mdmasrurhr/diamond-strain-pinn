@@ -1,14 +1,12 @@
-"""
-decide.py -- read finished runs back and apply the selection rules. No training.
+"""Read finished runs and apply the rules that turn results into a choice.
 
 jobs.py launches runs; this reads their metrics_summary.csv files, aggregates
-over seeds, and applies the rule that turns a table of numbers into a choice.
-The rules live here rather than in each study script so that "smallest within
-one standard deviation of the best" means the same thing everywhere.
+over seeds, and applies the selection rules. The rules live here so that
+"smallest within one standard deviation of the best" means the same thing in
+every study.
 
-Nothing here decides anything a human would disagree with silently: every
-function returns the chosen row AND the table it chose from, and the study
-scripts print both.
+Each function returns both the chosen row and the table it was chosen from, so
+the calling script can print the evidence alongside the decision.
 """
 
 import os

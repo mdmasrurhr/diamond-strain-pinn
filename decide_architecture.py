@@ -1,27 +1,19 @@
-"""
-decide_architecture.py -- decide every element of the network, by measurement.
+"""Measure which network shape and which layer types to use.
 
-The thesis network is 5 x 100 SiLU with Xavier init and mean-initialised output
-biases. Four of those were screened and are right. Four more elements were never
-varied at all -- normalisation, dropout, residual connections, and the fact that
-every hidden layer has the same width -- so "we do not use them" rested on
-nothing. This script measures all of it, in two passes.
+Two passes, each varying one thing at a time from a reference configuration so
+every difference is attributable.
 
-    capacity     depth x width. Applies the parsimony rule explicitly: the
-                 smallest model within one standard deviation of the best. The
-                 thesis stated this rule and then did not follow it.
-    elements     the four that were never varied, one at a time from the
-                 reference, so each difference is attributable.
-
-An element that loses here is not "out of scope" -- it is measured and rejected,
-which is a different and defensible claim.
+    capacity   depth x width over a grid. Selects the smallest network whose
+               error is within one standard deviation of the best.
+    elements   normalisation, dropout, residual connections and non-uniform
+               layer widths, each on its own.
 
     python decide_architecture.py                 # both passes, 3 seeds
     python decide_architecture.py --pass capacity
-    python decide_architecture.py --full          # 17 seeds
+    python decide_architecture.py --full          # all 17 seeds
     python decide_architecture.py --report
 
-Results in results/architecture_study/<pass>/<variant>/seed<n>/.
+Writes results/architecture_study/<pass>/<variant>/seed<n>/.
 """
 
 import argparse
@@ -123,7 +115,6 @@ def report():
             print("    %-16s %+8.2f meV  p=%.3f  -> %s" % (r.variant, d, p, verdict))
         print("\n  An element with 'no evidence either way' is not adopted: it costs")
         print("  a parameter to explain and buys nothing measurable. That is a")
-        print("  measured exclusion, which is what the paper should say.")
 
     for name, res in (("capacity", cap), ("elements", ele)):
         if res is not None:

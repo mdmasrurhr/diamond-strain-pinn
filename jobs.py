@@ -20,13 +20,12 @@ import config as C
 
 
 def train_cmd(model, seed, dft_pct, results_dir, extra=None, env_prefix=""):
-    """One training command. `model` is sa|rba|mlp (03) or shi (04).
+    """Build one training command.
 
-    The decided configuration is passed EXPLICITLY from config.py rather than
-    left to the trainers' argparse defaults -- the defaults are the thesis
-    values, and a campaign that silently ran on them would ignore every stage-1
-    decision. `extra` flags are appended last, so a study that varies one of
-    these still overrides it (argparse keeps the final occurrence).
+    `model` is sa, rba or mlp for train_pinn.py, or shi for train_baseline.py.
+    Settings come from config.py. Flags in `extra` are appended last, so a
+    study varying one of them overrides the default, because argparse keeps
+    the final occurrence of a flag.
     """
     script = "train_baseline.py" if model == "shi" else "train_pinn.py"
     cmd = ('%s%s %s --data_csv %s --results_dir %s --seed %d --dft_pct %d'

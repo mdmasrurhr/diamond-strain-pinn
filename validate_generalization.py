@@ -1,29 +1,17 @@
-"""
-validate_generalization.py -- did it learn the mapping, or memorise the sample?
+"""Measure whether the model learned the mapping or memorised the samples.
 
-Test-set accuracy answers neither question on its own. A model that interpolates
-perfectly inside the sampled region can still fail the moment the input leaves
-it, and the fixed split cannot tell the difference because every family and every
-strain magnitude appears in training.
+Test error alone does not separate the two, because every deformation family
+and every strain magnitude appears in training. Three measurements, all read
+from runs that already exist.
 
-Three measurements, each reading runs that already exist.
-
-    memorisation   train error against test error. A large gap is memorisation;
-                   a small gap with both high is underfitting. Reported per
-                   label fraction, because the gap is a function of how much
-                   data there is.
-    family         accuracy on a deformation family the model never saw, from
-                   the group-holdout runs of decide_split.py.
-    magnitude      accuracy beyond the strain range seen in training, from the
-                   magnitude-split runs.
-
-The last two are expected to be much worse than the headline number. Reporting
-them is how the paper states the bounds of its own claim instead of leaving a
-reader to discover them.
+    memorisation   train error against test error, per label fraction. A large
+                   gap means memorisation; both high means underfitting.
+    family         error on a deformation family held out of training.
+    magnitude      error beyond the strain range seen in training.
 
     python validate_generalization.py
 
-Writes results/validate_generalization/generalization.csv
+Writes results/generalization/*.csv
 """
 
 import os
@@ -108,7 +96,7 @@ def per_family():
     for model, row in g.iterrows():
         print("  %-10s %s" % (model, " ".join("%12.2f" % row[c] for c in cols)))
     print("\n  The family with the largest error is where the model fails first, and")
-    print("  it should be the one the paper discusses rather than the average.")
+    print("  The largest of these is where the model fails first.")
     return g.reset_index()
 
 

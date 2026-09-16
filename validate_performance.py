@@ -1,25 +1,13 @@
-"""
-validate_performance.py -- what it costs to train and what it costs to use.
+"""Measure what the model costs to train and to run.
 
-The case for a surrogate is economic: it replaces an HSE06 calculation that takes
-hours with a forward pass that takes microseconds. That argument needs the
-numbers on both sides, and neither is currently recorded anywhere.
-
-    inference   latency per prediction, batched and single, on GPU and CPU.
-                The single-sample CPU number is the one that matters for a
-                model embedded in a device-design loop.
-    memory      parameters, weight file size, and peak memory for a forward pass.
-    training    wall-clock per run and for the whole campaign, read from the
-                runs that exist.
-    payoff      how many predictions it takes to repay the training cost, given
-                the DFT cost the surrogate avoids.
-
-The payoff number is the feasibility argument in one line, and it is the thing a
-reviewer asking "why not just run DFT" needs answered.
+    inference   time per prediction, single and batched, on GPU and CPU
+    memory      parameter count and weight size
+    training    wall-clock per run, read from finished runs
+    payoff      how many predictions repay the cost of training
 
     python validate_performance.py --run_dir results/label_sweep/sa/100pct/seed42
 
-Writes results/validate_performance/operational.csv
+Writes results/performance/operational.csv
 """
 
 import argparse
@@ -34,9 +22,8 @@ import torch
 import config as C
 
 # One HSE06 static calculation on this cell, in core-hours. This is the cost the
-# surrogate is compared against, so it must not be a guess: read it from the
-# campaign's own OUTCAR timings before the number goes in the paper.
-# TODO(verify): placeholder until the OUTCAR "Total CPU time" fields are summed.
+# surrogate is compared against. Replace it with the value read from the
+# reference calculations' own timing output.
 DFT_CORE_HOURS = 8.0
 DFT_COST_IS_VERIFIED = False
 
@@ -149,8 +136,7 @@ def main():
         print("  built it answers in %.1f ms a question DFT charges %.0f core-hours for."
               % (rows[0]["per_sample_ms"], DFT_CORE_HOURS))
         if not DFT_COST_IS_VERIFIED:
-            print("\n  NOTE: DFT_CORE_HOURS is a placeholder. Sum the OUTCAR timings")
-            print("  before quoting any of this in the paper.")
+            print("\n  NOTE: DFT_CORE_HOURS is a placeholder, see the top of this file.")
 
     out = C.results_dir("validate_performance")
     pd.DataFrame(rows).to_csv(os.path.join(out, "operational.csv"), index=False)

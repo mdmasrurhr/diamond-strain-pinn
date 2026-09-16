@@ -1,46 +1,25 @@
-"""
-search_hyperparameters.py -- random search over the training hyperparameters.
+"""Random search over the training hyperparameters.
 
-Why random rather than grid: with seven knobs a grid is either too coarse to be
-useful or too large to run, and random search covers the important directions
-far better for the same budget.
+Random rather than grid: over this many settings a grid is either too coarse to
+be useful or too large to run.
 
-Protocol, which matters more than the search itself:
+Protocol:
 
-  * Trials are scored on VALIDATION error only. The test fold is never consulted
-    during selection, so the reported test numbers stay honest.
-  * Each trial runs at three seeds and is scored on the mean, because a single
-    seed cannot separate two configurations whose difference is smaller than the
-    seed-to-seed spread.
-  * The winner is then re-run at all 17 seeds (--confirm) so the configuration we
-    report is measured at the same precision as everything else.
+  * Trials are scored on validation error only; the test fold is not consulted.
+  * Each trial runs at three seeds and is scored on the mean, because one seed
+    cannot separate configurations that differ by less than the seed spread.
+  * The winner is re-run at all 17 seeds before being reported.
+  * The full ranking is written out, not just the winner, so the shape of the
+    search space is visible.
 
-WHEN TO RUN THIS. After the primary campaign, not before. The headline result
-must be a measurement of a configuration chosen on stated grounds, not the best
-of three hundred tries -- otherwise the number reported is the maximum of a
-search, and the search's own optimism is baked into it. This stage exists to
-answer "how much was left on the table", which is a different and honest claim,
-and to supply the configuration for a follow-up study.
-
-THE STANDARD PRACTICE THIS FOLLOWS, in one place so it is not re-argued:
-
-  1. Search on VALIDATION only; the test fold stays sealed.
-  2. Score each trial on the mean of 3 seeds -- one seed cannot separate two
-     configurations whose difference is under the seed-to-seed spread (1.9 meV,
-     from decide_budget.py).
-  3. Random, not grid: over this many knobs a grid is too coarse or too large,
-     and random search covers the important directions better per unit compute.
-  4. Confirm the winner at the full 17 seeds before reporting it.
-  5. Report the SEARCH, not only its winner: the ranking file shows how flat or
-     peaked the space is, which says whether the chosen point is a real optimum
-     or one draw from a plateau.
+Run this after the main experiment, not before: reporting the best of several
+hundred trials as the headline result selects on the quantity being reported.
 
     python search_hyperparameters.py --trials 300
-    python search_hyperparameters.py --trials 300 --space wide   # + architecture
-    python search_hyperparameters.py --confirm        # after the search finishes
+    python search_hyperparameters.py --trials 300 --space wide
+    python search_hyperparameters.py --confirm
 
-Results in results/hyperparameter_search/trial<NNN>/seed<n>/, ranking in
-results/hyperparameter_search/ranking.csv.
+Writes results/hyperparameter_search/trial<NNN>/seed<n>/ and ranking.csv
 """
 
 import argparse
@@ -54,7 +33,7 @@ import config as C
 import jobs
 
 # Each knob is drawn either log-uniformly (learning rates, decays) or from a
-# short list. The ranges bracket the thesis configuration by about a decade.
+# short list. Ranges span about a decade either side of the default.
 SPACE = {
     "adamw_lr":  ("loguniform", 3e-4, 1e-2),
     "adamw_wd":  ("loguniform", 1e-6, 1e-3),
@@ -69,10 +48,8 @@ SPACE = {
     "sa_lr":     ("loguniform", 1e-3, 3e-2),
 }
 
-# --space wide adds the architecture elements the thesis never varied and the
-# loss weights that sit on cliffs. It is a much larger space and needs
-# proportionally more trials; it is separate so the default search stays
-# comparable with the thesis one.
+# --space wide adds the architecture options and two loss weights. It is a much
+# larger space and needs proportionally more trials, so it is kept separate.
 WIDE_EXTRA = {
     "norm":        ("choice", ["none", "layer"]),
     "dropout":     ("choice", [0.0, 0.0, 0.05, 0.1]),   # weighted toward off

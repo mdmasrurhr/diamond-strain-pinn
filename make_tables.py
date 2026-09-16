@@ -1,18 +1,11 @@
-"""
-make_tables.py -- gather every finished run into a few readable tables.
+"""Gather every finished run into aggregated tables.
 
-Each training run writes its own metrics_summary.csv into its own folder. This
-script walks results/, reads all of them, and produces the aggregated tables the
-figures and the paper are written from. Run it whenever a study finishes; it is
-cheap and safe to repeat.
+Each run writes its own metrics_summary.csv. This walks results/, reads all of
+them, and writes the summary tables. Cheap and safe to repeat.
 
     python make_tables.py
 
-Writes into results/tables/
-    all_runs.csv        one row per training run, every study, with its study tag
-    sweep.csv           accuracy vs labelled fraction, mean +/- s.d. over seeds
-    ablations.csv       every ablation variant against its reference
-    per_strain.csv      full-data error split by deformation family
+Writes results/tables/
 """
 
 import glob

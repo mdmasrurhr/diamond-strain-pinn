@@ -1,25 +1,13 @@
-"""
-style.py -- one look for every figure, and colours that mean something.
+"""Shared appearance settings for every figure.
 
-Two separate jobs, and the second matters more.
+apply() sets the plotting defaults once. series(name) returns the colour,
+marker and line style for a model, keyed by name so the same model looks the
+same in every figure.
 
-LOOK. Eight figure scripts each set their own rcParams, so the figure set drifts
-and a change means editing every file. `apply()` is the single place that decides
-how a figure looks.
-
-MEANING. Colour was previously assigned by position in a loop --
-`MODEL_COLORS[i % len(MODEL_COLORS)]` -- so a model's colour changed depending on
-which models happened to be in that figure. A reader cannot learn a colour that
-moves. Here every model, strain family and data regime owns a fixed colour, keyed
-by name, so the same thing is the same colour in every figure of the document.
-
-The palette is chosen so that it survives the three ways a figure gets read:
-
-  * greyscale printing -- the lightness values are separated, so the curves stay
-    distinguishable when the paper is photocopied
-  * colour-vision deficiency -- no red/green pair carries meaning on its own;
-    every series also differs in marker and line style
-  * a projector -- nothing lighter than #7 on white
+The palette is the Okabe-Ito set, which stays distinguishable under the common
+forms of colour blindness. Lightness is spread across the series so they remain
+separable in greyscale, and every series also differs in marker and line style,
+so colour is never the only thing distinguishing them.
 
     import style
     style.apply()
@@ -38,9 +26,8 @@ _SKY    = "#56B4E9"
 _YELLOW = "#F0E442"
 _GREY   = "#666666"
 
-# Models. The two PINNs are the warm/cool pair the reader compares most often;
-# the baseline is deliberately the dullest colour on the page, because it is the
-# reference and not the result.
+# One entry per model. The two physics-informed variants take contrasting warm
+# and cool colours; the baseline takes grey.
 MODEL = {
     "SA_PINN":       dict(color=_BLUE,   marker="o", linestyle="-",  label="SA-PINN"),
     "Dia_RBA_PINN":  dict(color=_ORANGE, marker="s", linestyle="-",  label="RBA-PINN"),

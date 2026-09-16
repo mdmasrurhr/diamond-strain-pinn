@@ -1,37 +1,34 @@
-# ==============================================================================
-# train_pinn.py -- trains ONE physics-informed network and writes its results.
-#
-# This is the only file in the repository that trains a PINN. Every study script
-# (05-11, 15) runs this file as a subprocess with different flags, so there is
-# exactly one copy of the training numerics to read, check, or change.
-#
-# Three models share this backbone and differ only in how each training sample
-# is weighted in the loss:
-#
-#   --model rba   weights follow a fixed residual rule (EMA, updated every 100 epochs)
-#   --model sa    weights are learned adversarially (gradient ascent on the same loss)
-#   --model mlp   no physics terms at all -- the physics-free control
-#
-# The Shi ANN baseline is a different architecture and lives in train_baseline.py.
-#
-# Usage
-#   python train_pinn.py --model rba --seed 42 --dft_pct 100
-#
-# Outputs (into --results_dir)
-#   epoch_log.csv        one row per epoch
-#   test_results.csv     one row per test sample
-#   metrics_summary.csv  one summary row for the run
-# ==============================================================================
+"""Train one physics-informed network and write its results.
 
-# ============================================================
-# SECTION 1: IMPORTS AND ARGUMENT PARSING
-# ============================================================
-# Defines every command-line option and parses them into `args`. Besides the run
-# basics and tuned hyperparameters (defaults reproduce the thesis), this model
-# also exposes the ABLATION switches the ablation drivers rely on: --no_rba
-# (freeze weights uniform), --no_soap (AdamW only), --drop_loss <name> (zero a
-# loss term), and --init_seed (vary init while holding the split, for the
-# deep-ensemble UQ). All default to "off", so a bare run is the full model.
+The study scripts run this file as a subprocess with different flags, so the
+training numerics exist in one place.
+
+Three models share this network and differ only in how each training sample is
+weighted in the loss:
+
+    --model rba   weight follows an exponential moving average of the physics
+                  residual, refreshed every 100 epochs
+    --model sa    weight is a learned parameter, updated by gradient ascent on
+                  the same loss
+    --model mlp   physics terms switched off, leaving a plain network
+
+The comparison baseline is a different architecture and lives in
+train_baseline.py.
+
+    python train_pinn.py --model rba --seed 42 --dft_pct 100
+
+Writes three files into --results_dir:
+    epoch_log.csv        one row per epoch
+    test_results.csv     one row per test sample
+    metrics_summary.csv  one summary row for the run
+"""
+
+# --- command-line options ---
+# Besides the run settings, these expose the switches the ablation scripts use:
+# --no_rba (uniform sample weights), --no_soap (first optimizer only),
+# --drop_loss <name> (zero one loss term) and --init_seed (vary initialisation
+# while holding the split fixed). All default to off, so a bare run trains the
+# full model.
 
 import argparse
 import os
@@ -115,10 +112,7 @@ parser.add_argument("--drop_loss", action="append", default=[],
 # which is how the ablation and sensitivity scripts vary one setting at a time.
 parser.add_argument("--width",      type=int,   default=C.TUNED["width"])
 parser.add_argument("--depth",      type=int,   default=C.TUNED["depth"])
-# Architecture elements that the thesis never varied. Defaults reproduce the
-# thesis network exactly, so behaviour is unchanged unless a flag is passed; the
-# point of exposing them is that "not used" then becomes a measured result
-# instead of a silence.
+# Optional architecture elements, all off by default.
 parser.add_argument("--norm",       type=str,   default="none",
                     choices=["none", "layer", "batch"],
                     help="normalisation inserted after each hidden activation")
@@ -318,9 +312,8 @@ def load_and_split(data_csv, seed, dft_pct, cv_fold=None, cv_nfolds=5,
         idx_tr, idx_va = train_test_split(
             idx_trval, test_size=0.125, random_state=seed)
     elif cv_fold is None and args.split == "group":
-        # One deformation family held out entirely. This is extrapolation to an
-        # unseen kind of deformation, not interpolation, and it is the harder
-        # claim a strain-engineering reader actually wants.
+        # Hold one deformation family out of training entirely, so the test
+        # set is a kind of deformation the model has never seen.
         held = _normalize_strain_type(args.holdout_family)
         idx_te = idx_all[stype_all == held]
         pool   = idx_all[stype_all != held]
@@ -453,12 +446,11 @@ def _apply_init(linear, scheme):
 
 
 def _hidden_sizes():
-    """Widths of the hidden layers, before the 2-unit output.
+    """Return the width of each hidden layer.
 
-    Uniform is the thesis network. Taper and widen exist so that "every hidden
-    layer is the same width" stops being an unexamined default: they keep the
-    depth and roughly the parameter budget while moving capacity toward the input
-    or toward the output.
+    "uniform" gives every layer the same width. "taper" shrinks each layer by
+    a quarter toward the output, "widen" grows it, both keeping the depth and
+    roughly the parameter count.
     """
     if args.width_shape == "uniform":
         return [args.width] * args.depth
@@ -475,10 +467,8 @@ class PINNModel(nn.Module):
 
     Eg = CBM - VBM is structural, not learned, so the identity holds exactly.
 
-    Normalisation, dropout and residual connections are all off by default,
-    which reproduces the thesis network. They are wired in rather than absent so
-    that their exclusion rests on a measurement (decide_architecture.py)
-    rather than on never having tried them.
+    Normalisation, dropout and residual connections are available but off by
+    default; decide_architecture.py measures each of them.
     """
 
     def __init__(self, cbm_mean, vbm_mean):
@@ -771,14 +761,10 @@ def train(data, device):
     X_anc_t = X_tr_t[data["anc_mask"]]
     X_nz_t  = X_tr_t[data["nz_mask"]]
 
-    # BatchNorm is structurally incompatible with this loss, and it is worth
-    # saying why rather than letting it fail obscurely deeper in. The anchor
-    # boundary condition evaluates the network at the unstrained reference state,
-    # of which there is exactly one row. BatchNorm in training mode normalises by
-    # within-batch variance, and a batch of one has none. Making it run would
-    # mean either dropping the anchor term or evaluating it under different
-    # normalisation statistics than the data term -- both change the objective.
-    # LayerNorm has no such problem: it normalises per sample.
+    # The anchor term evaluates the network on the unstrained state alone, and
+    # BatchNorm needs a within-batch variance that a single row does not have.
+    # Fail here with an explanation rather than deeper in. LayerNorm normalises
+    # per sample and works.
     if args.norm == "batch" and len(X_anc_t) < 2:
         raise SystemExit(
             "--norm batch is not applicable: the anchor term evaluates the model "
@@ -983,13 +969,8 @@ def train(data, device):
             _, _, eg_pred_t = model(X_tr_t)
         tr_mae = _train_mae(eg_pred_t)
 
-        # Two different quantities, under two different names. The thesis code
-        # wrote the running best into val_mae_eV while the Shi baseline wrote the
-        # current value into the same column, so any cross-model reading of it
-        # compared the kept checkpoint against the luckiest single epoch.
-        # Both are logged here, in every trainer, and neither name is reused.
-        #   val_mae_eV   -- validation error as last measured (checkpoint cadence)
-        #   val_best_eV  -- best validation error seen so far, i.e. the kept model
+        # val_mae_eV is the validation error as last measured, val_best_eV the
+        # best seen so far. The second identifies the checkpoint that is kept.
         epoch_rows.append({
             "epoch":        ep,
             "train_mae_eV": round(tr_mae, 6),

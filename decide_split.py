@@ -1,31 +1,26 @@
-"""
-decide_split.py -- choose the partitioning scheme, on evidence.
+"""Compare ways of splitting the data into train, validation and test sets.
 
-The thesis used a stratified 70/10/20 split keyed to the seed. That is a
-reasonable default, but it was never compared with anything, and a split is not
-a neutral choice: it decides what question the reported number answers.
+A split decides what question the reported error answers, so five schemes are
+run and reported separately rather than one being assumed.
 
-    stratified   every family appears in training -> measures INTERPOLATION
-                 within the sampled region. The adopted scheme.
-    random       the same proportions, unstratified. Its only job is to show
-                 what stratification is worth: if the two agree, stratification
-                 is not carrying the result.
-    kfold        5-fold cross-validation. Uses all the data and gives a tighter
-                 estimate, at 5x the compute.
-    group        one deformation family held out entirely -> EXTRAPOLATION to an
-                 unseen kind of deformation. A different and harder claim.
-    magnitude    train below a strain threshold, test above -> extrapolation
-                 beyond the strain range seen. The device-relevant question.
+    stratified   every deformation family appears in training; measures
+                 accuracy inside the sampled region
+    random       same proportions without stratification; shows what
+                 stratification is worth
+    kfold        5-fold cross-validation; uses all the data, costs 5x
+    group        one deformation family held out entirely; measures accuracy
+                 on a kind of deformation never seen
+    magnitude    train below a strain threshold and test above it; measures
+                 accuracy beyond the strain range seen
 
-The last two are expected to be much worse. That is the point: they measure
-something the adopted split cannot, and reporting them is how the paper says
-what its accuracy does and does not cover.
+The last two are expected to give much larger errors. They bound what the model
+can be used for.
 
-    python decide_split.py              # screen at 3 seeds
+    python decide_split.py              # 3 seeds
     python decide_split.py --full       # all 17 seeds
-    python decide_split.py --report     # read finished runs, decide
+    python decide_split.py --report     # read finished runs and compare
 
-Results in results/split_study/<scheme>/seed<n>/.
+Writes results/split_study/<scheme>/seed<n>/.
 """
 
 import argparse

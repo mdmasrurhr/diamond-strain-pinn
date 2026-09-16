@@ -1,26 +1,18 @@
-"""
-run_matched_prior.py -- give the physics only the labels the data loss gets.
+"""Refit the physics constants on each run's own labelled subset.
 
-There is an asymmetry in the scarce-label experiment that is easy to miss. The
-physics constants are fitted once, on the whole dataset, and then frozen. So at
-1% labels the supervised loss sees nine states, but the physics term is carrying
-information distilled from all of them. A reviewer is entitled to ask how much
-of the low-data advantage is really the reused calibration.
+In the main experiment the constants are fitted once on the whole dataset and
+then frozen, so at 1% labels the supervised term sees nine states while the
+physics term carries information from all of them. This removes that asymmetry:
+for each seed and fraction the 13 constants are refitted on that run's labelled
+rows only, using the same split and subset draw as the trainer.
 
-This script removes the asymmetry. For each seed and fraction it re-fits the 13
-constants on THAT RUN'S OWN labelled subset -- reproducing the trainer's split
-and labelled-subset draw exactly, so the prior sees precisely the rows the data
-term sees -- and retrains on that prior. Nothing in these runs has access to
-more labels than the fraction allows.
-
-The refitted constants reach the trainer through the PHYSICS_CONST_JSON
-environment variable, which physics.py reads at import. Unset, the frozen
-production constants are used and every other study is unaffected.
+The difference between this and the main experiment is the part of the
+low-label result that comes from the reused calibration.
 
     python run_matched_prior.py
+    python run_matched_prior.py --quick
 
-Results in results/matched_prior/<model>/<pct>pct/seed<n>/, refitted
-constants in results/matched_prior/constants/.
+Writes results/matched_prior/<model>/<pct>pct/seed<n>/.
 """
 
 import argparse
