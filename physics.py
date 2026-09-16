@@ -178,14 +178,21 @@ def vbm_numpy(s, vbm_0, a_v, a_v2, b, b2, d_bp):
     i1 = xx + yy + zz
     j2 = ((xx - yy) ** 2 + (yy - zz) ** 2 + (zz - xx) ** 2) / 6.0 \
         + xy ** 2 + yz ** 2 + zx ** 2
-    out = np.empty(len(s))
-    for k in range(len(s)):
-        h = np.array([
-            [-b * (2 * xx[k] - yy[k] - zz[k]) / 2.0, d_bp * xy[k], d_bp * zx[k]],
-            [d_bp * xy[k], -b * (2 * yy[k] - zz[k] - xx[k]) / 2.0, d_bp * yz[k]],
-            [d_bp * zx[k], d_bp * yz[k], -b * (2 * zz[k] - xx[k] - yy[k]) / 2.0]])
-        out[k] = np.linalg.eigvalsh(h).max()
-    return vbm_0 + a_v * i1 + a_v2 * i1 ** 2 + out + b2 * j2
+    # One 3x3 Hamiltonian per row, built as a single stacked array so eigvalsh
+    # handles them in one call. eigvalsh returns eigenvalues in ascending order,
+    # so the last is the band edge.
+    h = np.zeros((len(s), 3, 3))
+    h[:, 0, 0] = -b * (2 * xx - yy - zz) / 2.0
+    h[:, 1, 1] = -b * (2 * yy - zz - xx) / 2.0
+    h[:, 2, 2] = -b * (2 * zz - xx - yy) / 2.0
+    h[:, 0, 1] = d_bp * xy
+    h[:, 1, 0] = d_bp * xy
+    h[:, 1, 2] = d_bp * yz
+    h[:, 2, 1] = d_bp * yz
+    h[:, 0, 2] = d_bp * zx
+    h[:, 2, 0] = d_bp * zx
+    largest = np.linalg.eigvalsh(h)[:, 2]
+    return vbm_0 + a_v * i1 + a_v2 * i1 ** 2 + largest + b2 * j2
 
 
 def fit_cbm(strain, y):
