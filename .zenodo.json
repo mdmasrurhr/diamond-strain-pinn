@@ -1,0 +1,25 @@
+{
+  "title": "Physics-informed neural networks for strain-dependent bandgaps in diamond",
+  "description": "<p>Code and data for predicting the electronic bandgap of strained diamond from the six-component Green-Lagrange strain tensor. A neural network is trained on hybrid-functional reference calculations while being required to agree with deformation-potential and Bir-Pikus models of how strain shifts the band edges.</p><p>Includes the dataset of 1,292 deformation states with band-edge energies, the analytic physics models and their calibration routine, the training program for every model variant, the studies that established each setting, the ablation and validation scripts, and the figure pipeline.</p>",
+  "license": "MIT",
+  "upload_type": "software",
+  "access_right": "open",
+  "creators": [
+    { "name": "Hossain Rakin, Md Masrur", "affiliation": "Ingram School of Engineering, Texas State University" },
+    { "name": "Rabelo Martins, Nathan", "affiliation": "Department of Physics, Texas State University" },
+    { "name": "Scolfaro, Luisa M.", "affiliation": "Department of Physics, Texas State University" },
+    { "name": "Shadman, Rashik", "affiliation": "Ingram School of Engineering, Texas State University" },
+    { "name": "Haque, Ariful", "affiliation": "Ingram School of Engineering, Texas State University" },
+    { "name": "Dutta, Anandi", "affiliation": "Ingram School of Engineering, Texas State University" },
+    { "name": "Bora, Aniruddha", "affiliation": "Department of Computer Science, Texas State University" },
+    { "name": "Valles, Damian", "affiliation": "Ingram School of Engineering, Texas State University" }
+  ],
+  "keywords": [
+    "physics-informed neural network",
+    "diamond",
+    "bandgap",
+    "strain engineering",
+    "density functional theory",
+    "deformation potential"
+  ]
+}
