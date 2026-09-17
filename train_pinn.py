@@ -36,7 +36,7 @@ import config as C
 # The analytic band-edge model. It lives in physics.py so that this trainer and
 # the zero-label solvers use the identical equations and constants.
 from physics import physics_cbm as _physics_cbm_softmin
-from physics import physics_vbm, CBM_0, VBM_0, AV
+from physics import physics_vbm, CBM_0, VBM_0, AV, XI_D, XI_U
 
 # SOAP is the second-phase optimizer. It is optional so the trainer still runs
 # on a checkout without it; the fallback keeps AdamW for the whole budget.
@@ -517,7 +517,10 @@ LOSS_W = {
                           # because the DP/BP physics model has >89 meV systematic error there
 
 # Reference gradients at zero strain used for gradient BCs
-A_C_REF = -16.342843   # dCBM/dI1 [eV] -- derived from DP constants at zero strain
+# Slope of the conduction edge with respect to the trace of the strain
+# tensor at zero strain. Derived from the constants rather than written
+# out, so it cannot fall out of step with them when they are refitted.
+A_C_REF = XI_D + XI_U / 3.0
 A_V_REF = AV           # dVBM/dI1 [eV] -- equals linear hydrostatic term at zero strain
 
 # Isotropic gap slope, fitted to the reference data rather than taken from the
