@@ -1,0 +1,35 @@
+general:
+ System = <state name>
+# ISTART = 0     # 1 if WAVECAR exists and 0 if it doesnt exist
+# ICHARG= 2      # 2 if ISTART = 0 - take superposition of atomic charge densities
+ ENCUT  = 550   # specifies the cutoff energy for the plane-wave-basis set in eV (default: ENCUT = largest ENMAX on the POTCAR file
+ ISMEAR = 0     # 0: Gaussian smearing; # (-1):Fermi smearing; #(-2):partial occupancies are read in from the WAVECAR or INCAR file
+ SIGMA = 0.01    # specifies the width of smearing in eV.
+ NCORE = 12
+ NSW = 500       #specifies the number of self consistent calculation steps up to convergence
+ IBRION = 2     #allows the ionic relaxation to define the correct position for the ions that results in their groundstate.
+ POTIM = 0.5
+ ISYM = 0
+ EDIFF = 1E-6
+ EDIFFG = -0.001
+# ISPIN = 2
+ ISIF = 2
+ LORBIT = 11
+ NELM = 60
+ PREC   = Accuratei
+ ALGO   = Normal
+ LWAVE  = .TRUE.
+ LCHARGE = .TRUE.
+#-------------------------------
+# Saídas opcionais
+#-------------------------------
+#LVTOT    = .TRUE.
+#LCHARG   = .TRUE.
+#LAECHG   = .TRUE.
+#LELF     = .TRUE.
+
+#-------------------------------
+# Hibrido
+#-------------------------------
+# LHFCALC = .TRUE.
+# HFSCREEN = 0.2

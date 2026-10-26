@@ -1,0 +1,24 @@
+System = <state name>
+ISTART = 1
+ICHARG = 1
+ENCUT  = 550
+ISMEAR = 0
+SIGMA = 0.01
+NCORE = 12
+NSW = 0
+IBRION = 2
+POTIM = 0.5
+ISYM = 0
+EDIFF = 1E-6
+ISIF = 2
+LORBIT = 11
+NELM = 60
+PREC   = Accurate
+ALGO   = Normal
+LWAVE  = .TRUE.
+LCHARGE = .TRUE.
+
+# Hibrido
+LHFCALC = .TRUE.
+HFSCREEN = 0.2
+AEXX = 0.27

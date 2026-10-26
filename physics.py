@@ -1,25 +1,29 @@
-"""Analytic model of how strain moves the band edges of diamond.
+# ============================================================
+# physics.py
+#
+# The analytic models of the band edges under strain, shared by the trainer,
+# the calibration (calib_v2.py) and the analysis.
+#
+#   CBM(E): six <100> conduction valleys, each shifted by an extended
+#     deformation-potential expansion (hydrostatic XI_D, uniaxial XI_U,
+#     quadratic XI_Q, cross term XI_C, second invariant XI_Q2, shear
+#     splitting 2*XI_UP); the band edge is their minimum. With beta given,
+#     a log-sum-exp soft minimum makes it differentiable.
+#   VBM(E): largest eigenvalue of an extended 3x3 Bir-Pikus matrix
+#     (hydrostatic AV/AV2, deviatoric B_BP/B2_BP, shear D_BP).
+#   Eg(E) = CBM(E) - VBM(E).
+#
+# UNITS: strain dimensionless (Green-Lagrange); energies in eV.
+#
+# The 13 constants below are default values only. Every run of the paper
+# replaces them with the constants fitted on that run's own training portion
+# (calibrate_*.py, results/98_constants_v2 and results/100_constants_labelmatched),
+# passed through the environment variable PHYSICS_CONST_JSON.
+# ============================================================
 
-    CBM(E)  lowest of six <100> conduction valleys, from a deformation-potential
-            expansion
-    VBM(E)  largest eigenvalue of a 3x3 Bir-Pikus Hamiltonian
-    Eg(E)   CBM(E) - VBM(E)
-
-Strain is dimensionless (Green-Lagrange), energies are in eV.
-"""
-
-import json
-import os
-
-import numpy as np
 import torch
-from scipy.optimize import least_squares
 
-# The 13 constants below are fitted once to HSE06 reference data and then held
-# fixed. Regenerate them with:  python 02_fit_physics_constants.py --freeze
-# The fit uses the training fold only, so the test fold stays unseen.
-
-# --- CBM deformation-potential constants (eV) ---
+# --- CBM deformation-potential constants (eV), defaults ---
 CBM_0 = 14.534980535287007
 XI_D  = -24.84604763603144
 XI_U  = 24.328031070892287
@@ -28,7 +32,7 @@ XI_Q  = 12.984971351885598
 XI_C  = -29.582212007237697
 XI_Q2 = 18.18785190955848
 
-# --- VBM extended Bir-Pikus constants (eV) ---
+# --- VBM extended Bir-Pikus constants (eV), defaults ---
 VBM_0  = 8.998824547791076
 AV     = -14.238965719572148
 AV2    = 13.090080116642534
@@ -37,57 +41,20 @@ B2_BP  = 70.41960340594974
 D_BP   = -1.9671238909825762e-07
 
 
-# --- optional per-run constant override ---
-# Setting the environment variable PHYSICS_CONST_JSON to a JSON file of
-# {name: value} replaces any subset of the constants above when this module is
-# imported. 09_run_matched_prior.py uses it to give each run a set fitted on only
-# that run's labelled rows. With the variable unset the values above are used.
-
-CONSTANT_NAMES = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",
-                  "VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]
-
-
-def _load_constant_overrides():
-    """Read the override file named by PHYSICS_CONST_JSON, or return nothing."""
-    path = os.environ.get("PHYSICS_CONST_JSON", "").strip()
-    if not path:
-        return {}
-    with open(path) as handle:
-        overrides = json.load(handle)
-    for name in overrides:
-        if name not in CONSTANT_NAMES:
-            raise KeyError("PHYSICS_CONST_JSON: unknown constant " + str(name))
-    return overrides
-
-
-# Applied one name at a time so an unknown key raises instead of being ignored.
-for _name, _value in _load_constant_overrides().items():
-    if _name == "CBM_0":
-        CBM_0 = float(_value)
-    elif _name == "XI_D":
-        XI_D = float(_value)
-    elif _name == "XI_U":
-        XI_U = float(_value)
-    elif _name == "XI_UP":
-        XI_UP = float(_value)
-    elif _name == "XI_Q":
-        XI_Q = float(_value)
-    elif _name == "XI_C":
-        XI_C = float(_value)
-    elif _name == "XI_Q2":
-        XI_Q2 = float(_value)
-    elif _name == "VBM_0":
-        VBM_0 = float(_value)
-    elif _name == "AV":
-        AV = float(_value)
-    elif _name == "AV2":
-        AV2 = float(_value)
-    elif _name == "B_BP":
-        B_BP = float(_value)
-    elif _name == "B2_BP":
-        B2_BP = float(_value)
-    elif _name == "D_BP":
-        D_BP = float(_value)
+# --- Per-run constants ---
+# PHYSICS_CONST_JSON names a JSON file of {name: value}; its values replace the
+# defaults above at import time. Every training run of the paper sets it.
+import os as _os
+_CONST_JSON = _os.environ.get("PHYSICS_CONST_JSON", "").strip()
+if _CONST_JSON:
+    import json as _json
+    with open(_CONST_JSON) as _f:
+        _ov = _json.load(_f)
+    for _k, _v in _ov.items():
+        if _k in globals() and isinstance(globals()[_k], float):
+            globals()[_k] = float(_v)
+        else:
+            raise KeyError("PHYSICS_CONST_JSON: unknown constant " + str(_k))
 
 
 def physics_cbm(strain, beta=None):
@@ -147,110 +114,25 @@ def physics_eg(strain, beta=None):
     return physics_cbm(strain, beta=beta) - physics_vbm(strain)
 
 
-# --- numpy versions, used for fitting ---
-# The functions above are torch, because training differentiates through them.
-# Fitting is a scipy least-squares problem, so the same equations appear here in
-# numpy. 02_fit_physics_constants.py checks the two agree.
+# ==============================================================================
+# NUMPY VERSION OF THE CONDUCTION-BAND MODEL (used by calib_v2.py)
+# ==============================================================================
+
+import numpy as _np
 
 CBM_KEYS = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2"]
 VBM_KEYS = ["VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]
 
 
 def cbm_numpy(s, cbm_0, xi_d, xi_u, xi_up, xi_q, xi_c, xi_q2):
-    # Arguments follow CBM_KEYS order, so a fit result splats straight back in:
-    #     cbm_numpy(strain, *fit_cbm(strain, y))
-    xx, yy, zz = s[:, 0], s[:, 1], s[:, 2]
-    xy, yz, zx = s[:, 3], s[:, 4], s[:, 5]
+    # Arguments follow CBM_KEYS order.
+    xx, yy, zz, xy, yz, zx = [s[:, i] for i in range(6)]
     i1 = xx + yy + zz
 
     def valley(e):
         return xi_d * i1 + xi_u * e + xi_q * e ** 2 + xi_c * i1 * e + xi_q2 * i1 ** 2
 
-    d = np.stack([valley(zz) + 2 * xi_up * xy, valley(zz) - 2 * xi_up * xy,
+    d = _np.stack([valley(zz) + 2 * xi_up * xy, valley(zz) - 2 * xi_up * xy,
                    valley(yy) + 2 * xi_up * zx, valley(yy) - 2 * xi_up * zx,
                    valley(xx) + 2 * xi_up * yz, valley(xx) - 2 * xi_up * yz], axis=1)
     return cbm_0 + d.min(axis=1)
-
-
-def vbm_numpy(s, vbm_0, a_v, a_v2, b, b2, d_bp):
-    xx, yy, zz = s[:, 0], s[:, 1], s[:, 2]
-    xy, yz, zx = s[:, 3], s[:, 4], s[:, 5]
-    i1 = xx + yy + zz
-    j2 = ((xx - yy) ** 2 + (yy - zz) ** 2 + (zz - xx) ** 2) / 6.0 \
-        + xy ** 2 + yz ** 2 + zx ** 2
-    # One 3x3 Hamiltonian per row, built as a single stacked array so eigvalsh
-    # handles them in one call. eigvalsh returns eigenvalues in ascending order,
-    # so the last is the band edge.
-    h = np.zeros((len(s), 3, 3))
-    h[:, 0, 0] = -b * (2 * xx - yy - zz) / 2.0
-    h[:, 1, 1] = -b * (2 * yy - zz - xx) / 2.0
-    h[:, 2, 2] = -b * (2 * zz - xx - yy) / 2.0
-    h[:, 0, 1] = d_bp * xy
-    h[:, 1, 0] = d_bp * xy
-    h[:, 1, 2] = d_bp * yz
-    h[:, 2, 1] = d_bp * yz
-    h[:, 0, 2] = d_bp * zx
-    h[:, 2, 0] = d_bp * zx
-    largest = np.linalg.eigvalsh(h)[:, 2]
-    return vbm_0 + a_v * i1 + a_v2 * i1 ** 2 + largest + b2 * j2
-
-
-def fit_cbm(strain, y):
-    """Fit the 7 conduction-band constants to measured CBM energies.
-
-    Returns them in CBM_KEYS order, so the result can be passed straight back
-    into cbm_numpy.
-    """
-
-    def residual(params):
-        return cbm_numpy(strain, *params) - y
-
-    start = [14.5, -13.0, 7.95, 10.0, 13.0, -2.7, 11.0]
-    lower = [10.0, -50.0, -10.0, -30.0, -200.0, -200.0, -300.0]
-    upper = [20.0, 50.0, 30.0, 30.0, 200.0, 200.0, 300.0]
-    fit = least_squares(residual, start, method="trf", bounds=(lower, upper),
-                        max_nfev=100000)
-    return fit.x
-
-
-def fit_vbm(strain, y):
-    """Fit the 6 valence-band constants to measured VBM energies.
-
-    Fitted in two passes. The first holds the quadratic terms at zero and fits
-    only the linear model, which is well conditioned. Its answer then starts the
-    full fit, so the quadratic terms refine a sensible solution instead of
-    searching from nothing.
-    """
-
-    def linear_residual(params):
-        vbm_0, a_v, b, d_bp = params
-        return vbm_numpy(strain, vbm_0, a_v, 0.0, b, 0.0, d_bp) - y
-
-    def full_residual(params):
-        return vbm_numpy(strain, *params) - y
-
-    lower = [-20.0, -60.0, -500.0, -30.0, -500.0, -50.0]
-    upper = [40.0, 60.0, 500.0, 30.0, 500.0, 50.0]
-
-    # The linear pass uses the same bounds as the full fit, on the four
-    # parameters it varies. Leaving it unbounded lets it return a starting point
-    # the full fit would reject, which raises rather than fitting.
-    linear_lower = [lower[0], lower[1], lower[3], lower[5]]
-    linear_upper = [upper[0], upper[1], upper[3], upper[5]]
-    linear_start = [8.8, -15.0, -3.0, -16.8]
-    linear_fit = least_squares(linear_residual, linear_start, method="trf",
-                               bounds=(linear_lower, linear_upper),
-                               max_nfev=100000).x
-
-    # Re-order the linear answer into the full 6-parameter layout, with the two
-    # quadratic terms (a_v2, b2) starting at zero.
-    vbm_0, a_v, b, d_bp = linear_fit
-    start = [vbm_0, a_v, 0.0, b, 0.0, d_bp]
-    # Nudge strictly inside the bounds: least_squares rejects a start that sits
-    # exactly on one.
-    span = [u - l for l, u in zip(lower, upper)]
-    start = [min(max(v, l + 1e-9 * w), u - 1e-9 * w)
-             for v, l, u, w in zip(start, lower, upper, span)]
-    fit = least_squares(full_residual, start, method="trf",
-                        bounds=(lower, upper), max_nfev=100000)
-    return fit.x
