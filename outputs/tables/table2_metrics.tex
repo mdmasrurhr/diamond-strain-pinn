@@ -1,0 +1,26 @@
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+ & \multicolumn{6}{c}{\textbf{Accuracy}} & \multicolumn{3}{c}{\textbf{Physical validity}} \\
+\cmidrule(lr){2-7}\cmidrule(l){8-10}
+\textbf{Model} & \textbf{MAE} & \textbf{RMSE} & \textbf{P95} & \textbf{Max} & \textbf{$R^2$} & \textbf{Sign} & \textbf{DP error} & \textbf{Shear slope} & \textbf{Axis drift} \\
+ & (meV) & (meV) & (meV) & (meV) & & (\%) & (eV) & (eV) & (meV) \\
+\midrule
+Analytic models alone & 51.3 $\pm$ 6.3 & 72.7 & 131.4 & 300 & 0.993 & 98.7 & 0.516 & 0.00 & 0.0 \\
+\addlinespace
+\multicolumn{10}{l}{\textit{5\% of the training states labeled (45 calculations)}} \\
+Our model & 30.6 $\pm$ 5.6 & 55.3 & 108.4 & 298 & 0.996 & 99.6 & 0.009 & 1.21 & 12.4 \\
+SA-PINN & 53.4 $\pm$ 6.7 & 77.0 & 140.5 & 352 & 0.992 & 99.5 & 0.432 & 1.48 & 23.7 \\
+RBA-PINN & 53.5 $\pm$ 6.7 & 78.0 & 151.0 & 349 & 0.991 & 99.6 & 0.501 & 2.16 & 32.3 \\
+$\Delta$-learning & 48.6 $\pm$ 8.9 & 82.8 & 157.5 & 473 & 0.989 & 99.5 & 0.006 & 0.94 & 39.1 \\
+MLP & 274.3 $\pm$ 46.3 & 407.9 & 902.8 & 1672 & 0.765 & 96.1 & 0.059 & 4.44 & 273.0 \\
+Gaussian process & 300.0 $\pm$ 61.9 & -- & -- & -- & 0.721 & -- & -- & -- & -- \\
+\addlinespace
+\multicolumn{10}{l}{\textit{100\% of the training states labeled (893--900 calculations)}} \\
+Our model & 7.6 $\pm$ 2.8 & 20.7 & 30.3 & 144 & 0.999 & 99.7 & 0.005 & 0.15 & 4.9 \\
+SA-PINN & 53.3 $\pm$ 6.5 & 76.5 & 144.3 & 336 & 0.992 & 99.2 & 0.396 & 2.59 & 25.4 \\
+RBA-PINN & 33.9 $\pm$ 3.5 & 51.9 & 102.8 & 253 & 0.996 & 99.8 & 0.519 & 0.51 & 20.8 \\
+$\Delta$-learning & 7.8 $\pm$ 2.6 & 21.1 & 35.5 & 146 & 0.999 & 99.5 & 0.005 & 0.63 & 8.5 \\
+MLP & 11.4 $\pm$ 2.9 & 29.2 & 59.2 & 190 & 0.999 & 100.0 & 0.002 & 0.30 & 16.2 \\
+Gaussian process & 72.5 $\pm$ 6.7 & -- & -- & -- & 0.987 & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,28 @@
+\begin{tabular}{p{6.2cm}rrrrrr}
+\toprule
+\textbf{Comparison} & \textbf{$t(16)$} & \textbf{$P$} & \textbf{$d$} & \textbf{95\% CI} & \textbf{Wilcoxon $P$} & \textbf{Shapiro--Wilk $P$} \\
+\midrule
+MAE, MLP vs our model, 100\% labeled & 3.85 & 0.0014 & 0.93 & $1.7$ to $5.9$~meV & 0.0038 & 0.015 \\
+MAE, SA-PINN vs our model, 100\% labeled & 25.14 & $<$0.001 & 6.10 & $41.9$ to $49.6$~meV & $<$0.001 & 0.28 \\
+MAE, RBA-PINN vs our model, 100\% labeled & 23.81 & $<$0.001 & 5.77 & $23.9$ to $28.6$~meV & $<$0.001 & 0.028 \\
+95th-percentile error, MLP vs our model, 100\% labeled & 4.82 & $<$0.001 & 1.17 & $16.2$ to $41.7$~meV & 0.0021 & 0.0047 \\
+Maximum error, MLP vs our model, 100\% labeled & 1.44 & 0.17 & 0.35 & $-21.7$ to $112.9$~meV & 0.16 & 0.86 \\
+Shear-family MAE, MLP vs our model, 100\% labeled & 3.77 & 0.0083 & 0.92 & $4.4$ to $15.6$~meV & 0.019 & 0.0063 \\
+Shear-sign drift, SA-PINN vs our model, 5\% labeled & 2.57 & 0.021 & 0.62 & $0.3$ to $3.5$~meV & 0.023 & 0.92 \\
+MAE, MLP vs our model, 5\% labeled & 21.75 & $<$0.001 & 5.28 & $219.9$ to $267.4$~meV & $<$0.001 & 0.997 \\
+Sign accuracy, our model vs MLP, 5\% labeled & 7.73 & $<$0.001 & 1.87 & $2.6$ to $4.5$ & $<$0.001 & 0.17 \\
+MAE, analytic models vs our model, 0\% labeled & 7.87 & $<$0.001 & 1.91 & $3.2$ to $5.5$~meV & $<$0.001 & 0.12 \\
+MAE, our model without vs with the isotropic term, 0\% labeled & 10.26 & $<$0.001 & 2.49 & $3.1$ to $4.8$~meV & $<$0.001 & 0.39 \\
+MAE, SA-PINN vs MLP, 25\% labeled & 2.86 & 0.011 & 0.69 & $1.1$ to $7.7$~meV & 0.013 & 0.81 \\
+MAE, RBA-PINN vs MLP, 50\% labeled & 12.54 & $<$0.001 & 3.04 & $14.5$ to $20.4$~meV & $<$0.001 & 0.35 \\
+MAE, our model without vs with the three agreement terms, 1\% labeled & 5.07 & $<$0.001 & 1.23 & $6.1$ to $14.8$~meV & $<$0.001 & 0.018 \\
+95th-percentile error, our model with vs without the agreement terms, 5\% labeled & 2.83 & 0.048 & 0.69 & $3.7$ to $26.0$~meV & 0.033 & 0.6 \\
+Axis-relabelling drift, our model with vs without the agreement terms, 5\% labeled & 4.46 & 0.0024 & 1.08 & $2.4$ to $6.6$~meV & 0.005 & 0.58 \\
+MAE, our model without vs with the symmetry term, 5\% labeled & 8.43 & $<$0.001 & 2.04 & $4.2$ to $7.0$~meV & $<$0.001 & 0.98 \\
+Axis-relabelling drift, our model without vs with the symmetry term, 100\% labeled & 6.23 & $<$0.001 & 1.51 & $2.4$ to $4.9$~meV & $<$0.001 & 0.065 \\
+Deformation-potential error, our model without vs with the isotropic term, 0\% labeled & 51.97 & $<$0.001 & 12.61 & $0.49$ to $0.53$~eV & $<$0.001 & 0.0052 \\
+MAE, our model with label-matched vs training-portion constants, 2\% labeled & 3.96 & 0.0034 & 0.96 & $8.0$ to $26.5$~meV & $<$0.001 & 0.037 \\
+MAE, our model with label-matched vs training-portion constants, 5\% labeled & 6.14 & $<$0.001 & 1.49 & $5.5$ to $11.3$~meV & $<$0.001 & 0.39 \\
+MAE, our model with label-matched vs training-portion constants, 10\% labeled & 1.01 & 0.58 & 0.24 & $-0.9$ to $2.6$~meV & 0.22 & 0.43 \\
+\bottomrule
+\end{tabular}

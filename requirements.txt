@@ -1,19 +1,11 @@
-# Tested with Python 3.12. Versions below are the ones used for the published
-# runs; 00_check_env.py records the exact environment of any run it is given.
-#
+# Package versions that produced the paper's results (Python 3.12). Install PyTorch first, as the CPU build:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0
 #   pip install -r requirements.txt
-#
-# PyTorch: install the build that matches your CUDA version if you want GPU
-# training. The CPU build works but a full campaign is impractical on CPU.
-# See https://pytorch.org/get-started/locally/
-
-numpy>=2.0
-pandas>=2.0
-scipy>=1.13
-scikit-learn>=1.5
-torch>=2.4
-matplotlib>=3.8
-
-# Optional. Without it, the per-epoch CPU and RAM columns of epoch_log.csv
-# are written as 0.0 and nothing else changes.
+# setup_env.sh does both in a conda environment.
+torch==2.11.0
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0
+scipy==1.17.1
+matplotlib==3.10.8
 psutil

@@ -1,173 +1,132 @@
-# Predicting the bandgap of strained diamond with a physics-informed neural network
+# Physics-informed neural networks for strain-dependent bandgaps in diamond
 
-This code predicts the electronic bandgap of diamond under an arbitrary
-mechanical strain. The strain is described by six numbers (the Green-Lagrange
-strain tensor), and the model returns the bandgap in electron-volts.
+Code and data for the paper *Physics-informed neural networks for strain-dependent bandgaps in diamond*
+(M. M. H. Rakin, N. Rabelo Martins, L. M. Scolfaro, R. Shadman, A. Haque, A. Dutta, A. Bora and D. Valles;
+manuscript submitted to *Communications Materials*).
 
-The hard part is that the reference data is expensive. Each training label comes
-from an HSE06 hybrid-functional density-functional-theory calculation costing
-hours of compute, so there are only about a thousand of them. A plain neural
-network needs far more data than that to learn a six-dimensional function.
+The models predict the bandgap of diamond under an arbitrary strain, given as the six components of the Green–Lagrange
+strain tensor. They learn from 1,292 hybrid-functional DFT calculations and use two analytic models of how strain shifts
+the band edges: deformation-potential theory for the conduction band and the Bir–Pikus model for the valence band. The
+paper compares several ways of combining the two, from a plain neural network (MLP) to physics-informed networks
+(SA-PINN, RBA-PINN), Δ-learning and our model, across labeled fractions from 0 to 100% of the training data.
 
-The approach here is to put the physics into the training objective. Two
-textbook models describe how strain moves the band edges: deformation-potential
-theory for the conduction band and the Bir-Pikus Hamiltonian for the valence
-band. Neither is accurate enough on its own, but both are approximately right
-everywhere. The network is trained to fit the expensive labels **and** to agree
-with the analytic physics, so the physics supplies structure wherever labels are
-missing. The result stays usable when labelled data is scarce.
+This repository holds everything needed to repeat every training run of the paper and to recompute every number, table
+and figure from the results.
 
----
+## Contents
 
-## What you need
+| Path | What it is |
+|---|---|
+| `data/dft_hy_v9.csv` | The reference dataset: 1,292 deformation states, strain tensor and band edges (`data/README.md`) |
+| `dft/` | VASP input files, the relaxed structure of every state and the absolute energies (`dft/README.md`) |
+| `03_train_pinn.py` | The training program for every network of the paper (one run per call) |
+| `physics.py`, `calib_v2.py` | The analytic models and their calibration |
+| `symsplit.py` | The division of the data that keeps symmetry-equivalent states in the same portion |
+| `soap.py`, `metrics_report.py`, `config.py` | SOAP optimizer, evaluation metrics, shared settings |
+| `calibrate_constants.py`, `calibrate_heldout.py`, `calibrate_labelmatched.py` | Fit the 13 constants of the analytic models for every run, on that run's training portion only |
+| `results/98_constants_v2/`, `results/100_constants_labelmatched/` | The fitted constants used by the paper's runs |
+| `make_tasks.py` | Writes the exact command of every training run of the paper (task lists) |
+| `run_task.sh`, `submit.sh`, `status.sh`, `setup_env.sh`, `check_env.py` | Run the task lists as SLURM job arrays, one core per run |
+| `classical_baselines.py` | Gaussian process, random forest and gradient boosting on the same divisions and labeled states |
+| `diag_run.py`, `run_diagnostics.py` | Physical-validity diagnostics of trained runs (deformation potential, shear slope, symmetry drift) |
+| `select_weighting.py` | Selection of our model's weighting rule from validation errors |
+| `collect_metrics.py`, `benchmark_inference.py` | Computing cost of the runs; prediction time of a trained model |
+| `reference_smoke/`, `compare_smoke.py` | Short reference runs for checking an installation |
+| `analysis/` | The paper's analysis: `export_summary.py` → `make_tables.py` → `make_figures.py`, and `fig1_workflow.tex` |
+| `summary/` | Condensed results of all runs (about 3 MB), the input of `make_tables.py` and `make_figures.py` |
+| `outputs/` | The tables (LaTeX), `numbers.json` and the figures of the paper, as produced by `analysis/` |
 
-Python 3.10 or newer, and the packages in `requirements.txt`:
+## Model names
 
-```bash
-pip install -r requirements.txt
-```
-
-A GPU is strongly recommended. A single training run takes a few minutes on a
-GPU; the full study is thousands of runs. Everything also runs on CPU if you
-only want to try one model.
-
-## The quickest thing that shows it works
-
-```bash
-python train_pinn.py --model sa --seed 42 --dft_pct 100 --results_dir out/demo
-```
-
-Every option defaults to the value recorded in `config.py`, so this uses the
-configuration the study adopted. Passing a flag overrides it, which is how the
-ablation scripts vary one setting at a time.
-
-This trains one model on the full dataset and writes three files to `out/demo/`:
-per-epoch history, per-sample test predictions, and a one-line summary of the
-metrics. `--dft_pct` is the percentage of training labels the model is allowed
-to use, so `--dft_pct 5` is the scarce-label case the physics is there for.
-
-## How the repository is organised
-
-Scripts are numbered in the order they run, and the name says what each does.
-They group into seven stages; each stage settles something the next assumes.
-
-| stage | scripts | purpose |
+| In the paper | ID in the code | Trainer options (in addition to the shared ones; see `make_tasks.py`) |
 |---|---|---|
-| **setup** | `01_check.py`, `02_fit_physics_constants.py` | check the environment, the dataset and the training setup; fit the physics constants |
-| **decide** | `03_decide_split.py`, `04_decide_architecture.py`, `05_decide_optimizer.py`, `06_decide_budget.py` | settle every training setting, before any large run |
-| **measure** | `07_confirm_settings.py`, `08_run_label_sweep.py`, `09_run_matched_prior.py`, `10_run_classical_baselines.py` | the main experiment: accuracy against how many labels were used |
-| **ablate** | `11_ablate.py` | what each part of the model contributes |
-| **validate** | `12_validate.py` | what the trained model can and cannot do |
-| **tune** | `13_search_hyperparameters.py` | a large hyperparameter search, run after the main experiment |
-| **report** | `14_report.py` | tables and figures |
+| Our model | `hyb_sdp_ld9` | constants of the analytic models as network outputs, agreement terms weighted by s = min(1, 9/n), symmetry and curvature terms |
+| SA-PINN | `sa_pinn` | `--model sa_paper` (self-adaptive weights as published) |
+| RBA-PINN | `rba_pinn` | `--model rba_paper` (residual-based attention as published) |
+| Δ-learning | `delta` | `--model mlp --residual_phys` (learned correction to the analytic band edges) |
+| MLP | `mlp` | `--model mlp` (data and isotropic terms only) |
+| Our model without agreement terms | `sdp_net` | as our model, without the agreement terms |
+| Variants in the Supplementary Information | `hyb_sdp_ld45`, `hyb_ld9`, `hyb_ld45`, `hyb_ld45_col`, `hyb_fixed`, `delta_zs`, `delta_zs_sym` | see `make_tasks.py` |
 
-Scripts that cover several related checks take the check as their first
-argument, for example `python 12_validate.py robustness` or
-`python 01_check.py all`.
+The trainer also accepts options that the paper does not use (all off by default). Every run of the paper passes its
+options explicitly, as listed by `make_tasks.py`.
 
-Two scripts are not stages. `train_pinn.py` trains one physics-informed model
-and `train_baseline.py` trains one comparison model; the stage scripts call them
-many times with different settings.
+## Installation
 
-The rest are shared building blocks:
+Python 3.12 and the package versions in `requirements.txt`. On Linux, `./setup_env.sh` creates a conda environment
+`dspinn` with exactly these versions (PyTorch as the CPU build) and runs `check_env.py`. Or, in any environment:
 
-| file | what it holds |
-|---|---|
-| `config.py` | every setting, in one place, with a note on how each was chosen |
-| `physics.py` | the analytic band-edge equations and their 13 constants |
-| `jobs.py` | runs many training jobs across the available GPUs |
-| `decide.py` | reads finished runs back and applies the selection rules |
-| `style.py` | one consistent look for every figure |
-| `soap.py` | a third-party optimizer, vendored unchanged (see its header) |
+    pip install --index-url https://download.pytorch.org/whl/cpu torch==2.11.0
+    pip install -r requirements.txt
+    python check_env.py
 
-## Running the whole study
+All runs use the CPU with one thread; a GPU is not needed.
 
-```bash
-./run_all.sh                  # the full study
-./run_all.sh --quick          # 3 seeds instead of 17, for a smoke test
-./run_all.sh --stage decide   # one stage only
-```
+## Check an installation (about 10 minutes on 8 cores)
 
-Every stage can be re-run safely: a job whose output already exists is skipped,
-so an interrupted study picks up where it stopped.
+    python make_tasks.py smoke                     # 16 short runs, one per command shape of the paper
+    export OMP_NUM_THREADS=1
+    cut -f2- tasks/smoke.tsv | xargs -d '\n' -P 8 -I{} bash -c '{}'
+    python compare_smoke.py
 
-**The decide stage is the part it is tempting to skip.** Each of its scripts
-writes a decision file into `results/`. Read them, copy the chosen values into
-`config.py`, and only then run the measure stage. Running the main experiment
-first means measuring a configuration that the decide stage then tells you was
-the wrong one.
+`compare_smoke.py` compares each run with `reference_smoke/`. On the CPU that made the references (Intel Xeon W-2255)
+the predictions agree exactly; on other CPUs, rounding differs and a run passes if its test and validation errors agree
+within max(2 meV, 5%).
 
-The tune stage comes last for a related reason: searching for the best hyperparameters
-and then reporting that best number as the headline result is selecting on the
-quantity being reported. The search answers a different question, namely how
-much accuracy was left on the table.
+## Reproduce the tables and figures from the included summaries (about 1 minute)
 
-## The three models
+    python analysis/make_tables.py     # outputs/tables/: every table, numbers.json with every value quoted in the text
+    python analysis/make_figures.py    # outputs/figures/: Figures 2-5 and Supplementary Figures 1-3
 
-| name | what it is |
-|---|---|
-| **SA-PINN** | physics-informed; the weight of each training sample is *learned* during training |
-| **RBA-PINN** | physics-informed; sample weights follow a fixed rule based on the physics residual |
-| **Baseline ANN** | a purely data-driven network reproduced from the literature (`train_baseline.py`) |
+`make_tables.py` also evaluates the claims the text makes (50 checks) and reports how many fail; all pass.
 
-A fourth configuration, the same network with every physics term switched off,
-is used as a control. It isolates what the physics contributes, because it
-differs from the physics-informed models in nothing else.
+## Repeat the whole study
 
-SA-PINN and RBA-PINN differ in exactly one respect: how each sample is weighted.
-Architecture, optimizer, schedule, data and random seeds are identical, so any
-difference between them is attributable to the weighting rule alone.
+1. **Constants.** The fitted constants are included. To refit them: `python calibrate_constants.py`,
+   `python calibrate_heldout.py <scheme>` for each scheme listed in that script, and `python calibrate_labelmatched.py`.
+2. **Training runs.** `python make_tasks.py all` writes four task lists, 3,808 runs in total:
 
-## The data
+   | List | Runs | What |
+   |---|---|---|
+   | `tasks/main.tsv` | 1,989 | 13 models × 9 labeled fractions × 17 seeds |
+   | `tasks/heldout.tsv` | 1,088 | 8 models × (5 families left out + 3 strain cut-offs) × 17 seeds |
+   | `tasks/labelmatched.tsv` | 204 | 3 models with constants fitted on the labeled states, 4 fractions × 17 seeds |
+   | `tasks/ablation.tsv` | 527 | our model with one term of the objective removed |
 
-`data/dft_hy_v9.csv` holds 1,292 strained states. Each row has six strain
-components, the bandgap, and the two band-edge energies it is the difference of.
+   On a SLURM cluster: `./submit.sh tasks/main.tsv` (and so on; `./status.sh tasks/main.tsv` follows progress). Each line
+   can also be run directly: the part after the tab is a shell command, run from this folder. The full campaign behind
+   the paper (6,774 jobs, including studies not reported in the paper) used 2,488 core-hours on Intel Xeon Gold 6336Y cores.
+3. **After training:** `python classical_baselines.py`; `python run_diagnostics.py ...` (the two calls in its header);
+   `python collect_metrics.py`; `python select_weighting.py`; `mkdir -p results/inference_benchmark_final && python benchmark_inference.py results/B_main/hyb_sdp_ld9/100pct/seed42 > results/inference_benchmark_final/inference_times.txt`.
+4. **Analysis:** `python analysis/export_summary.py` (reads `results/`, writes `summary/`), then step "Reproduce the
+   tables and figures" above.
 
-```
-E_xx E_yy E_zz E_xy E_yz E_zx    strain (dimensionless)
-Eg_eV                            bandgap
-CBM_eV VBM_eV                    conduction and valence band edges
-strain_type                      which family of deformation this is
-```
+The raw run folders of the paper (about 18 GB) are not included because of their size; `summary/` contains everything
+the analysis reads from them.
 
-## What every run writes
+## How this repository was checked
 
-Three files with fixed column names, so any script can read any run:
+- The commands written by `make_tasks.py` are identical, character for character, to those of the 3,808 training runs
+  behind the paper.
+- `03_train_pinn.py`, `physics.py`, `soap.py`, `symsplit.py`, `metrics_report.py` and `calib_v2.py` are the files that
+  produced the paper's results, unchanged.
+- The smoke runs, started from this repository, reproduce the reference runs exactly on the reference CPU.
+- From `summary/`, `make_tables.py` reproduces every table of the paper byte for byte and every value quoted in the
+  text. `make_figures.py` reproduces the figures; only the horizontal jitter of the dots that mark individual runs can
+  differ.
 
-- `epoch_log.csv` - one row per epoch
-- `test_results.csv` - one row per test sample
-- `metrics_summary.csv` - one row summarising the run
+## Notes
 
-Two columns in `epoch_log.csv` are easy to confuse:
+- **Calibration.** The 13 constants of the analytic models are fitted separately for every run, on that run's training
+  portion only; test and validation states never enter. The label-matched constants use only the labeled states plus the
+  training states under isotropic strain, whose gaps every run sees.
+- **Preliminary studies.** The network size, optimizer and training length (Supplementary Tables 9 and 10 of the paper)
+  were fixed in preliminary studies made in September 2026 on a stratified random division. Their results are in
+  `summary/preliminary/`; the code that produced them is the earlier version of this repository, tagged `thesis-2026-09`.
+  That version is otherwise superseded: it calibrated the constants once and reused them for every run, divided the data
+  at random, and contained a valence-band fit and a zero-strain slope term that were later corrected.
+- **Model name.** "Our model" is the paper's working name; the code calls it `hyb_sdp_ld9`.
 
-| column | meaning |
-|---|---|
-| `val_mae_eV` | the validation error as last measured |
-| `val_best_eV` | the best validation error so far, which is the model that gets kept |
+## License and citation
 
-`metrics_summary.csv` also records `best_ckpt_epoch` and `epochs_run`. When
-those two are equal, the model was still improving when training stopped, which
-means the reported accuracy was limited by the epoch budget rather than by the
-model.
-
-## Reproducibility
-
-`01_check.py environment` records the interpreter, the package versions, the GPUs, a
-checksum of the dataset and the random-seed policy. Run it before and after a
-long study: if the two records differ, the results straddle a change in the
-environment and are not a single experiment.
-
-Random seeds control the data split, the network initialisation and the choice
-of which labels are visible. The thread count is pinned in `config.py`, because
-the number of threads changes the order in which floating-point sums are
-accumulated and that is enough to move the baseline by a few tenths of a
-percent.
-
-## Citation
-
-See `CITATION.cff`.
-
-## Licence
-
-MIT, see `LICENSE`. The vendored optimizer in `soap.py` is third-party code;
-its origin and authors are named in its file header.
+MIT license (`LICENSE`). If you use the code or the data, please cite the paper and this repository (`CITATION.cff`).

@@ -1,0 +1,17 @@
+item,value
+jobs,6774.0
+cpu_hours,2487.6110500000004
+low_label_ablation_jobs,153.0
+train_minutes_hyb_sdp_ld9,44.34045251396648
+train_minutes_sa_pinn,16.71268275862069
+train_minutes_rba_pinn,9.510848275862068
+train_minutes_mlp,8.804066091954022
+train_minutes_delta,13.688879888268158
+train_minutes_delta_zs,14.491013218390805
+train_minutes_delta_zs_sym,16.98972643678161
+train_minutes_sdp_net,45.39965176908753
+train_minutes_hyb_sdp_ld45,47.139380952380954
+train_minutes_hyb_fixed,17.168426406926407
+train_minutes_hyb_ld45,15.331863636363638
+train_minutes_hyb_ld9,16.22295238095238
+train_minutes_hyb_ld45_col,21.04260497835498

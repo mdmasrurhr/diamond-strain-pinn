@@ -1,21 +1,11 @@
-"""
-soap.py -- the SOAP optimizer (third-party code, vendored unchanged).
-
-SOAP: Improving and Stabilizing Shampoo using Adam.
-    Nikhil Vyas, Depen Morwani, Rosie Zhao, Itai Shapira, David Brandfonbrener,
-    Lucas Janson, Sham Kakade.  https://arxiv.org/abs/2409.11321
-
-Reference implementation: https://github.com/nikhilvyas/SOAP
-
-Included here so the training pipeline runs from a clean checkout with no extra
-install step. The algorithm is NOT part of this study's contribution; it is used
-as the second-phase optimizer (see train_pinn.py). The file is kept as published
-apart from this header, so it can be diffed against upstream.
-
-Parts of the original are modifications of PyTorch's AdamW and of
-https://github.com/jiaweizzhao/GaLore (galore_torch/galore_projector.py).
-"""
-
+import os as _os, sys as _sys
+_RR = _os.path.dirname(_os.path.abspath(__file__))
+while _RR != _os.path.sep and not _os.path.isdir(_os.path.join(_RR, '.git')):
+    _RR = _os.path.dirname(_RR)
+for _sub in ('scripts/models','scripts/solver','scripts/shared','scripts/diagnostics','scripts/ablations','scripts/comparison','scripts/figures','scripts/data_extract','scripts/data_prep','archive/post_sa_pinns'):
+    _p = _os.path.join(_RR, _sub)
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
 import torch
 import torch.nn as nn
 import torch.optim as optim

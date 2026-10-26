@@ -1,24 +1,48 @@
 cff-version: 1.2.0
 title: >-
-  Physics-informed neural networks for the strain-dependent
-  bandgap of diamond
-message: If you use this software, please cite it as below.
+  Physics-informed neural networks for strain-dependent bandgaps in diamond:
+  code and data
+message: If you use this software or dataset, please cite it as below.
 type: software
 authors:
-  - family-names: Hossain
-    given-names: Md Masrur Rakin
-    email: mdmasrurhr@gmail.com
-    affiliation: Texas State University
+  - family-names: Rakin
+    given-names: Md Masrur Hossain
+    affiliation: Ingram School of Engineering, Texas State University
+  - family-names: Rabelo Martins
+    given-names: Nathan
+    affiliation: Department of Physics, Texas State University
+  - family-names: Scolfaro
+    given-names: Luisa M.
+    affiliation: Department of Physics, Texas State University
+  - family-names: Shadman
+    given-names: Rashik
+    affiliation: Ingram School of Engineering, Texas State University
+  - family-names: Haque
+    given-names: Ariful
+    affiliation: Ingram School of Engineering, Texas State University
+  - family-names: Dutta
+    given-names: Anandi
+    affiliation: Ingram School of Engineering, Texas State University
+  - family-names: Bora
+    given-names: Aniruddha
+    affiliation: Department of Computer Science, Texas State University
+  - family-names: Valles
+    given-names: Damian
+    affiliation: Ingram School of Engineering, Texas State University
 repository-code: https://github.com/mdmasrurhr/diamond-strain-pinn
 abstract: >-
-  Predicts the electronic bandgap of strained diamond from the six-component
-  Green-Lagrange strain tensor. Deformation-potential and Bir-Pikus physics are
-  embedded in the training loss so the model stays accurate when labelled
-  HSE06 calculations are scarce.
+  Code and data for predicting the bandgap of strained diamond from the
+  six-component Green-Lagrange strain tensor. The dataset holds 1,292
+  deformation states computed with hybrid-functional DFT. The models combine
+  a neural network with deformation-potential and Bir-Pikus models of the band
+  edges; the repository includes every training run of the paper as a task
+  list, the calibration of the analytic models, the baselines, and the
+  analysis that produces every number, table and figure.
 keywords:
   - physics-informed neural network
   - diamond
   - bandgap
   - strain engineering
   - density functional theory
+  - deformation potential
 license: MIT

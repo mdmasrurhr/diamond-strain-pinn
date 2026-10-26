@@ -1,0 +1,1 @@
+results/B_main/hyb_sdp_ld9/100pct/seed42: 30413 parameters | all 1,292 states in 5.64 ms (4.37 us per state, batched) | single state 0.927 ms (median)

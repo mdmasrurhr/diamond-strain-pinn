@@ -1,0 +1,2 @@
+model_name,seed,dft_pct,n_labeled,test_mae_meV,test_rmse_meV,test_max_err_meV,test_p95_err_meV,test_mape_pct,sign_accuracy_pct,val_mae_meV,train_mae_meV,test_r2,cbm_mae_meV,vbm_mae_meV,mae_isotropic_meV,mae_uniaxial_meV,mae_biaxial_meV,mae_triaxial_meV,mae_shear_meV,total_epochs,epochs_run,best_ckpt_epoch,n_params,elapsed_s,gpu_mem_peak_mb
+Dia_RBA_PINN_residual,42,25,224,18.33,27.08,128.82,56.57,0.452,100.0,18.21,28.53,0.9992,17.07,13.51,4.6,10.48,9.22,11.8,30.94,300,300,250,29698,15.6,0.0
