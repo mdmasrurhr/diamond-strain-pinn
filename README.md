@@ -76,7 +76,7 @@ within max(2 meV, 5%).
 ## Reproduce the tables and figures from the included summaries (about 1 minute)
 
     python analysis/make_tables.py     # outputs/tables/: every table, numbers.json with every value quoted in the text
-    python analysis/make_figures.py    # outputs/figures/: Figures 2-5 and Supplementary Figures 1-3
+    python analysis/make_figures.py    # outputs/figures/: Figures 2-5 and Supplementary Figures 1-6
 
 `make_tables.py` also evaluates the claims the text makes (50 checks) and reports how many fail; all pass.
 
