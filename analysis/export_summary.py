@@ -3,7 +3,7 @@
 
 The raw results (several gigabytes: one folder per training run with test predictions, training logs and the trained
 model) are produced by the task lists of make_tasks.py, the calibration scripts and classical_baselines.py, followed by
-run_diagnostics.py, collect_metrics.py and select_weighting.py. This script reads them and writes summary/;
+run_diagnostics.py and select_weighting.py. This script reads them and writes summary/;
 make_tables.py and make_figures.py then need only summary/, the dataset and the constants, all of which are in the
 repository.
 
@@ -22,7 +22,7 @@ repository.
   curves.csv               mean training and lowest-validation MAE curves, every 10th iteration (Figure 4a,
                            Supplementary Figure 2)
   parity_median_run.csv    test predictions of the median run of our model with all training states labeled (Figure 5a)
-  cost.csv                 number of jobs, CPU time and mean training time per model
+  cost.csv                 mean training time of one run of our model, SA-PINN and RBA-PINN (minutes, one core)
   inference_times.txt      prediction time of a trained model
 Usage: python analysis/export_summary.py [raw_results_dir]   (default: results/)"""
 import glob, json, os, re, shutil, sys
@@ -34,8 +34,8 @@ import physics as P
 import metrics_report as MR
 R = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "results"))
 OUT = os.path.join(ROOT, "summary"); os.makedirs(OUT, exist_ok=True)
-FINAL, SA, RBA, MLP = "hyb_sdp_ld9", "sa_pinn", "rba_pinn", "mlp"
-PAPER = [FINAL, SA, RBA, MLP, "delta", "delta_zs", "delta_zs_sym", "sdp_net", "hyb_sdp_ld45", "hyb_fixed", "hyb_ld45", "hyb_ld9", "hyb_ld45_col"]
+FINAL, SA, RBA, MLP = "hyb_sdp_gap_ld9", "sa_pinn", "rba_pinn", "mlp"
+PAPER = [FINAL, "hyb_sdp_ld9", SA, RBA, MLP, "delta", "delta_zs", "delta_zs_sym", "sdp_net", "hyb_sdp_ld45", "hyb_fixed", "hyb_ld45", "hyb_ld9", "hyb_ld45_col"]
 SEEDS = list(range(42, 59)); SC = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]
 DATA = pd.read_csv(os.path.join(ROOT, "data", "dft_hy_v9.csv"))
 K = os.path.join(ROOT, "results", "98_constants_v2"); KL = os.path.join(ROOT, "results", "100_constants_labelmatched")
@@ -82,8 +82,10 @@ def test_ids(seed, scheme="B_main/%s/0pct" % FINAL):
 # ---------------------------------------------------------------- per-run metrics and diagnostics
 M = load("B_main/*/*pct/seed*", PAPER)
 A = load("B_ablation/%s_drop_*/*pct/seed*" % FINAL)
+A0 = load("B_ablation/hyb_sdp_ld9_drop_agreement/*pct/seed*"); A0["model"] = FINAL + "_drop_agreement"   # the same objective without the agreement term
+A = pd.concat([A, A0], ignore_index=True)
 L = load("B_labelmatched/*/*pct/seed*", [FINAL, "delta", "sdp_net"])
-DG = pd.concat([pd.DataFrame([json.loads(l) for l in open(os.path.join(R, f))]) for f in ("diagnostics.jsonl", "diagnostics_ablation.jsonl")])
+DG = pd.concat([pd.DataFrame([json.loads(l) for l in open(f)]) for f in sorted(glob.glob(os.path.join(R, "diagnostics*.jsonl")))])
 DG["run"] = DG.run.map(lambda p: p[p.index("/B_") + 1:]); DG = DG.drop_duplicates("run", keep="last")
 DG["dp"] = DG.slope_hydrostatic / 3.0; DG["shear_slope"] = DG.slope_shear.abs(); DG["dp_an"] = DG.ref_slope_hydrostatic / 3.0
 DG = DG.rename(columns={"axis_relabel_drift_meV": "axis", "shear_sign_drift_meV": "shearsign", "noise_rel_change": "noise"})
@@ -122,7 +124,7 @@ pd.DataFrame(hs).to_csv(os.path.join(OUT, "heldout_runs.csv"), index=False)
 # ---------------------------------------------------------------- copies of small summaries
 shutil.copy(os.path.join(R, "classical", "runs.csv"), os.path.join(OUT, "classical_runs.csv"))
 shutil.copy(os.path.join(R, "hybrid_choice.csv"), os.path.join(OUT, "hybrid_choice.csv"))
-shutil.copy(os.path.join(R, "inference_benchmark_final", "inference_times.txt"), os.path.join(OUT, "inference_times.txt"))
+shutil.copy(os.path.join(R, "inference_benchmark_gap", "inference_times.txt"), os.path.join(OUT, "inference_times.txt"))
 
 # ---------------------------------------------------------------- gradients and SA-PINN weights
 G, GT = [], []
@@ -162,14 +164,12 @@ cur.to_csv(os.path.join(OUT, "curves.csv"), index=False, float_format="%.6g")
 f100 = M[(M.model == FINAL) & (M.level == 100)].sort_values("MAE_meV"); med = f100.iloc[len(f100) // 2]
 pd.read_csv(os.path.join(R, med.run, "test_results.csv")).assign(run=med.run).to_csv(os.path.join(OUT, "parity_median_run.csv"), index=False)
 
-# ---------------------------------------------------------------- cost of the campaign
-rm = pd.read_csv(os.path.join(R, "run_metrics.csv"))   # every job of the campaign except the low-label ablation, read below
-p7dirs = [d for d in glob.glob(os.path.join(R, "B_ablation", "%s_drop_*" % FINAL, "*pct", "seed*"))
-          if int(d.split("/")[-2][:-3]) in (0, 1, 2) and d.split("/")[-3].split("_drop_")[1] in ("agreement", "cbm_vbm", "cons")]
-p7 = [float(re.search(r"User time \(seconds\): ([0-9.]+)", open(d + "/resources.txt").read()).group(1)) for d in p7dirs]
-wall = rm[rm.kind == "train"].groupby("model").wall_s.mean() / 60
-cost = [dict(item="jobs", value=len(rm) + len(p7dirs)), dict(item="cpu_hours", value=(rm.cpu_s.sum() + sum(p7)) / 3600),
-        dict(item="low_label_ablation_jobs", value=len(p7dirs))]
-cost += [dict(item="train_minutes_%s" % m, value=wall[m]) for m in PAPER if m in wall.index]
-pd.DataFrame(cost).to_csv(os.path.join(OUT, "cost.csv"), index=False)
+# ---------------------------------------------------------------- training time per run
+def minutes(model):
+    t = []
+    for d in glob.glob(os.path.join(R, "B_main", model, "*pct", "seed*")):
+        w = re.search(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): ([0-9:.]+)", open(d + "/resources.txt").read()).group(1)
+        t.append(sum(float(x) * 60 ** i for i, x in enumerate(reversed(w.split(":")))) / 60)
+    return float(np.mean(t))
+pd.DataFrame([dict(item="train_minutes_%s" % m, value=minutes(m)) for m in (FINAL, SA, RBA)]).to_csv(os.path.join(OUT, "cost.csv"), index=False)
 print("summary written to %s: %d main runs, %d ablation runs, %d label-matched runs, %d held-out rows" % (OUT, len(M), len(A), len(L), len(hs)))

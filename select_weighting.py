@@ -4,7 +4,7 @@
 Rule, fixed before the runs: among the six weighting variants (make_tasks.VARIANTS), the one with the lowest validation
 gap MAE, averaged over the 17 seeds at each of the nine labeled fractions and then over the fractions, on the
 symmetry-grouped division (results/B_main). Two robustness checks are printed next to it, the mean rank over fractions
-and the geometric mean over fractions. The selected variant is hyb_sdp_ld9, our model.
+and the geometric mean over fractions. The selected variant is hyb_sdp_ld9; its weighting rule is the one used by our model (hyb_sdp_gap_ld9).
 Writes results/hybrid_choice.csv (Supplementary Table 5 of the paper).
 Usage: python select_weighting.py [--allow-incomplete]   (incomplete = provisional look, nothing is written)"""
 import os, sys

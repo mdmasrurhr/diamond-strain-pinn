@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run diag_run.py on every finished run matching the given patterns and append one JSON line per run to a file.
-The paper's analysis needs (a superset of runs is fine; the files are merged by run folder):
-  python run_diagnostics.py results/diagnostics.jsonl "results/B_main/*/5pct/seed*" "results/B_main/*/100pct/seed*"
-  python run_diagnostics.py results/diagnostics_ablation.jsonl "results/B_ablation/*/*pct/seed*" "results/B_main/hyb_sdp_ld9/*pct/seed*"
+The paper's analysis needs the diagnostics of the runs below; analysis/export_summary.py reads every results/diagnostics*.jsonl:
+  python run_diagnostics.py results/diagnostics.jsonl "results/B_main/*/5pct/seed*" "results/B_main/*/100pct/seed*" \\
+         "results/B_main/hyb_sdp_gap_ld9/*pct/seed*" "results/B_ablation/*/*pct/seed*"
 Runs already in the output file are skipped. Usage: python run_diagnostics.py <out.jsonl> <glob> [<glob> ...]"""
 import glob, json, os, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor

@@ -23,7 +23,7 @@ plt.rcParams.update({"font.family": "sans-serif", "font.sans-serif": ["Liberatio
                      "font.size": 8, "axes.labelsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8, "legend.fontsize": 8,
                      "axes.linewidth": 0.75, "xtick.major.width": 0.75, "ytick.major.width": 0.75, "xtick.minor.width": 0.6, "ytick.minor.width": 0.6,
                      "lines.linewidth": 1.3, "hatch.linewidth": 0.6, "savefig.dpi": 600, "pdf.fonttype": 42, "axes.spines.top": False, "axes.spines.right": False})
-FINAL, SA, RBA, DELTA, MLP, GP = "hyb_sdp_ld9", "sa_pinn", "rba_pinn", "delta", "mlp", "GaussianProcess"
+FINAL, SA, RBA, DELTA, MLP, GP = "hyb_sdp_gap_ld9", "sa_pinn", "rba_pinn", "delta", "mlp", "GaussianProcess"
 STY = {FINAL: dict(c="#009E73", m="o", ls="-", h="", lab="Our model"),
        SA: dict(c="#0072B2", m="s", ls="-", h="////", lab="SA-PINN"),
        RBA: dict(c="#56B4E9", m="^", ls="-", h="\\\\\\\\", lab="RBA-PINN"),
@@ -213,3 +213,29 @@ for a, col, lab, yl in zip(ax, ("axis", "shearsign"), ("a", "b"), ("Change under
         bars(a, i, M[(M.model == m) & (M.level == 100)][col].values, m, 0.7)
     a.set_xticks(range(len(sm))); a.set_xticklabels([STY[m]["lab"] for m in sm], rotation=25, ha="right", rotation_mode="anchor"); a.set_ylabel(yl); a.set_ylim(0, None); letter(a, lab, x=-0.2)
 fig.tight_layout(w_pad=2.0); save(fig, "sfig3_symmetry", si=True)
+
+# ------------------------------------------------------------------ Supplementary Figure 4: the reference dataset
+DS = pd.read_csv(os.path.join(ROOT, "data", "dft_hy_v9.csv"))
+DS["fam"] = DS.strain_type.map(lambda x: "isotropic" if str(x) in ("unstrained", "isotropic") else str(x).split("_")[0])
+DS["I1"] = DS.E_xx + DS.E_yy + DS.E_zz
+fig, ax = plt.subplots(1, 3, figsize=(W, 2.6), gridspec_kw={"width_ratios": [1.3, 1.1, 1.0]})
+for f in FAMS:
+    g = DS[DS.fam == f]
+    ax[0].scatter(g.I1, g.Eg_eV, s=5, marker=FMK[f], color=FCOL[f], linewidths=0, alpha=0.8, label=f)
+ax[0].set_xlabel("Volumetric strain $I_1$"); ax[0].set_ylabel("Bandgap (eV)"); letter(ax[0], "a", x=-0.22)
+bp = ax[1].boxplot([DS[DS.fam == f].Eg_eV.values for f in FAMS], widths=0.55, showfliers=False, patch_artist=True,
+                   medianprops=dict(color="black", lw=1.0), whiskerprops=dict(lw=0.75), capprops=dict(lw=0.75))
+for patch, f in zip(bp["boxes"], FAMS):
+    patch.set_facecolor("white"); patch.set_edgecolor(FCOL[f]); patch.set_linewidth(1.0)
+for i, f in enumerate(FAMS):
+    v = DS[DS.fam == f].Eg_eV.values
+    ax[1].scatter(i + 1 + rng.uniform(-0.18, 0.18, len(v)), v, s=2.5, color=FCOL[f], alpha=0.5, linewidths=0, zorder=3)
+ax[1].set_xticks(range(1, 6)); ax[1].set_xticklabels(FAMS, rotation=25, ha="right", rotation_mode="anchor")
+ax[1].set_ylabel("Bandgap (eV)"); letter(ax[1], "b", x=-0.24)
+kc = DS.cbm_kpt_index.value_counts()
+ax[2].bar(range(len(kc)), kc.values, color="#777777", width=0.75)
+ax[2].set_yscale("log"); plain_log(ax[2].yaxis, [1, 10, 100, 1000]); ax[2].set_xticks([])
+ax[2].set_xlabel("Grid point holding the\nconduction-band minimum"); ax[2].set_ylabel("States"); letter(ax[2], "c", x=-0.24)
+fig.legend(handles=[Line2D([], [], color=FCOL[f], marker=FMK[f], ls="", ms=4, label=f) for f in FAMS], frameon=False, ncol=5,
+           loc="lower center", bbox_to_anchor=(0.5, -0.02))
+fig.tight_layout(rect=(0, 0.09, 1, 1), w_pad=1.6); save(fig, "sfig4_dataset", si=True)
