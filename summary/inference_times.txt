@@ -1,1 +1,1 @@
-results/B_main/hyb_sdp_ld9/100pct/seed42: 30413 parameters | all 1,292 states in 5.64 ms (4.37 us per state, batched) | single state 0.927 ms (median)
+/home/hipe02crest/Downloads/DiamondPINN_MASTER/07_results/leap2_campaign/B_main/hyb_sdp_gap_ld9/100pct/seed42: 30413 parameters | all 1,292 states in 4.74 ms (3.67 us per state, batched) | single state 0.920 ms (median)

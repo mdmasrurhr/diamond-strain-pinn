@@ -30,7 +30,7 @@ and figure from the results.
 | `classical_baselines.py` | Gaussian process, random forest and gradient boosting on the same divisions and labeled states |
 | `diag_run.py`, `run_diagnostics.py` | Physical-validity diagnostics of trained runs (deformation potential, shear slope, symmetry drift) |
 | `select_weighting.py` | Selection of our model's weighting rule from validation errors |
-| `collect_metrics.py`, `benchmark_inference.py` | Computing cost of the runs; prediction time of a trained model |
+| `benchmark_inference.py` | Prediction time of a trained model |
 | `reference_smoke/`, `compare_smoke.py` | Short reference runs for checking an installation |
 | `analysis/` | The paper's analysis: `export_summary.py` → `make_tables.py` → `make_figures.py`, and `fig1_workflow.tex` |
 | `summary/` | Condensed results of all runs (about 3 MB), the input of `make_tables.py` and `make_figures.py` |
@@ -40,13 +40,13 @@ and figure from the results.
 
 | In the paper | ID in the code | Trainer options (in addition to the shared ones; see `make_tasks.py`) |
 |---|---|---|
-| Our model | `hyb_sdp_ld9` | constants of the analytic models as network outputs, agreement terms weighted by s = min(1, 9/n), symmetry and curvature terms |
+| Our model | `hyb_sdp_gap_ld9` | constants of the analytic models as network outputs, agreement of the gap with the analytic models weighted by s = min(1, 9/n), symmetry and curvature terms |
 | SA-PINN | `sa_pinn` | `--model sa_paper` (self-adaptive weights as published) |
 | RBA-PINN | `rba_pinn` | `--model rba_paper` (residual-based attention as published) |
 | Δ-learning | `delta` | `--model mlp --residual_phys` (learned correction to the analytic band edges) |
 | MLP | `mlp` | `--model mlp` (data and isotropic terms only) |
-| Our model without agreement terms | `sdp_net` | as our model, without the agreement terms |
-| Variants in the Supplementary Information | `hyb_sdp_ld45`, `hyb_ld9`, `hyb_ld45`, `hyb_ld45_col`, `hyb_fixed`, `delta_zs`, `delta_zs_sym` | see `make_tasks.py` |
+| Our model without the agreement term | `sdp_net` | as our model, without the agreement term |
+| Weighting variants and other models in the Supplementary Information | `hyb_sdp_ld9`, `hyb_sdp_ld45`, `hyb_ld9`, `hyb_ld45`, `hyb_ld45_col`, `hyb_fixed`, `delta_zs`, `delta_zs_sym` | see `make_tasks.py` |
 
 The trainer also accepts options that the paper does not use (all off by default). Every run of the paper passes its
 options explicitly, as listed by `make_tasks.py`.
@@ -84,20 +84,20 @@ within max(2 meV, 5%).
 
 1. **Constants.** The fitted constants are included. To refit them: `python calibrate_constants.py`,
    `python calibrate_heldout.py <scheme>` for each scheme listed in that script, and `python calibrate_labelmatched.py`.
-2. **Training runs.** `python make_tasks.py all` writes four task lists, 3,808 runs in total:
+2. **Training runs.** `python make_tasks.py all` writes four task lists, 3,757 runs in total:
 
    | List | Runs | What |
    |---|---|---|
-   | `tasks/main.tsv` | 1,989 | 13 models × 9 labeled fractions × 17 seeds |
+   | `tasks/main.tsv` | 2,142 | 14 models × 9 labeled fractions × 17 seeds |
    | `tasks/heldout.tsv` | 1,088 | 8 models × (5 families left out + 3 strain cut-offs) × 17 seeds |
    | `tasks/labelmatched.tsv` | 204 | 3 models with constants fitted on the labeled states, 4 fractions × 17 seeds |
-   | `tasks/ablation.tsv` | 527 | our model with one term of the objective removed |
+   | `tasks/ablation.tsv` | 323 | our model with one term of the objective removed |
 
    On a SLURM cluster: `./submit.sh tasks/main.tsv` (and so on; `./status.sh tasks/main.tsv` follows progress). Each line
-   can also be run directly: the part after the tab is a shell command, run from this folder. The full campaign behind
-   the paper (6,774 jobs, including studies not reported in the paper) used 2,488 core-hours on Intel Xeon Gold 6336Y cores.
-3. **After training:** `python classical_baselines.py`; `python run_diagnostics.py ...` (the two calls in its header);
-   `python collect_metrics.py`; `python select_weighting.py`; `mkdir -p results/inference_benchmark_final && python benchmark_inference.py results/B_main/hyb_sdp_ld9/100pct/seed42 > results/inference_benchmark_final/inference_times.txt`.
+   can also be run directly: the part after the tab is a shell command, run from this folder. A run takes about 15–50
+   minutes on one core, depending on the model.
+3. **After training:** `python classical_baselines.py`; `python run_diagnostics.py ...` (the call in its header);
+   `python select_weighting.py`; `mkdir -p results/inference_benchmark_gap && python benchmark_inference.py results/B_main/hyb_sdp_gap_ld9/100pct/seed42 > results/inference_benchmark_gap/inference_times.txt`.
 4. **Analysis:** `python analysis/export_summary.py` (reads `results/`, writes `summary/`), then step "Reproduce the
    tables and figures" above.
 
@@ -106,7 +106,7 @@ the analysis reads from them.
 
 ## How this repository was checked
 
-- The commands written by `make_tasks.py` are identical, character for character, to those of the 3,808 training runs
+- The commands written by `make_tasks.py` are identical, character for character, to those of the 3,757 training runs
   behind the paper.
 - `03_train_pinn.py`, `physics.py`, `soap.py`, `symsplit.py`, `metrics_report.py` and `calib_v2.py` are the files that
   produced the paper's results, unchanged.
@@ -125,7 +125,7 @@ the analysis reads from them.
   `summary/preliminary/`; the code that produced them is the earlier version of this repository, tagged `thesis-2026-09`.
   That version is otherwise superseded: it calibrated the constants once and reused them for every run, divided the data
   at random, and contained a valence-band fit and a zero-strain slope term that were later corrected.
-- **Model name.** "Our model" is the paper's working name; the code calls it `hyb_sdp_ld9`.
+- **Model name.** "Our model" is the paper's working name; the code calls it `hyb_sdp_gap_ld9`.
 
 ## License and citation
 

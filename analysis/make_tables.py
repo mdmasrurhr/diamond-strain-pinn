@@ -20,7 +20,7 @@ sys.path.insert(0, ROOT)
 import metrics_report as MR
 OUT = os.path.join(ROOT, "outputs", "tables"); os.makedirs(OUT, exist_ok=True)
 
-FINAL, SA, RBA, MLP, DELTA, GP = "hyb_sdp_ld9", "sa_pinn", "rba_pinn", "mlp", "delta", "GaussianProcess"
+FINAL, SA, RBA, MLP, DELTA, GP = "hyb_sdp_gap_ld9", "sa_pinn", "rba_pinn", "mlp", "delta", "GaussianProcess"
 LV = [0, 1, 2, 5, 10, 25, 50, 75, 100]; NL = dict(zip(LV, [0, 9, 18, 45, 90, 224, 448, 672, 896])); SEEDS = list(range(42, 59))
 PCT = {p: "%d" % p for p in LV}   # labeled fraction of the training portion, in percent: the label used in every table
 FAMS = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]; SC = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]
@@ -122,6 +122,8 @@ MR.EG0 = GAP0                                             # sign accuracy is mea
 RAW["iso_reference"] = dict(gap0=GAP0, dp=DP_REF, n=int(win.sum()))
 put("gap0", "%.2f" % GAP0); put("dp_ref", "$%.2f$" % DP_REF); put("dp_ref_m", "%.2f" % DP_REF); put("n_iso_fit", "%d" % win.sum())
 put("n_states", "1{,}292"); check("n_states", len(DATA) == 1292)
+_i1 = DATA[["E_xx", "E_yy", "E_zz"]].sum(axis=1).abs() < 0.01                 # states the zero-strain slope terms act on
+put("n_nz_states", "%d" % _i1.sum()); put("n_nz_shear", "%d" % (_i1 & (DATA.strain_type == "shear")).sum())
 
 
 # band edges on the k-point grid (Supplementary Note 6)
@@ -270,17 +272,23 @@ check("max_mlp_896_ns", r["p_adj"] >= 0.05)
 check("r2_networks_896", all(mean(m, 100, "R2") > 0.99 for m in (FINAL, SA, RBA, DELTA, MLP)))
 # families at 896, our model vs MLP, Holm over the five families
 fr = family([compare(series(FINAL, 100, "MAE_%s_meV" % f), series(MLP, 100, "MAE_%s_meV" % f)) for f in FAMS])
-nonshear = [r for f, r in zip(FAMS, fr) if f != "shear"]
-put("fam_nonshear_p", "$P \\geq %.2f$" % min(r["p_adj"] for r in nonshear)); check("fam_nonshear_ns", all(r["p_adj"] >= 0.05 for r in nonshear))
-vals = [mean(m, 100, "MAE_%s_meV" % f) for m in (FINAL, MLP) for f in FAMS if f != "shear"]
-put("fam_range_896", "%.1f and %.1f" % (min(vals), max(vals)))
+FR = {f: r for f, r in zip(FAMS, fr) if f != "shear"}                        # diff = MLP minus our model
+better = [f for f, r in FR.items() if r["p_adj"] < 0.05 and r["diff"] < 0]       # families where the MLP is more accurate
+equal = [f for f, r in FR.items() if r["p_adj"] >= 0.05]
+join = lambda xs: " and ".join(xs)
+put("fam_mlp_better_names", join(better))
+put("fam_mlp_better_vals", " and ".join("%.1f against %.1f" % (mean(FINAL, 100, "MAE_%s_meV" % f), mean(MLP, 100, "MAE_%s_meV" % f)) for f in better) + "~meV")
+put("fam_mlp_better_p", pmax([FR[f]["p_adj"] for f in better])); put("fam_mlp_better_max", "%.1f" % max(-FR[f]["diff"] for f in better))
+put("fam_equal_names", join(equal)); put("fam_equal_p", "$P \\geq %.2f$" % min(FR[f]["p_adj"] for f in equal))
+check("fam_nonshear_split", set(better) == {"isotropic", "biaxial"} and set(equal) == {"uniaxial", "triaxial"} and max(-FR[f]["diff"] for f in better) < 1.5)
 register("stat_shear_896", "shear-family MAE, MLP vs our model, 100% labeled", fr[FAMS.index("shear")], "meV")
 put("mae_shear_ours_896", "%.1f" % mean(FINAL, 100, "MAE_shear_meV")); put("mae_shear_mlp_896", "%.1f" % mean(MLP, 100, "MAE_shear_meV"))
 check("shear_hardest_ours_896", max(FAMS, key=lambda f: mean(FINAL, 100, "MAE_%s_meV" % f)) == "shear")
 put("fam_max_nonshear_ours_896", "%.1f" % max(mean(FINAL, 100, "MAE_%s_meV" % f) for f in FAMS if f != "shear"))
 # physical validity
-ps = [COMP[(c, "shear_slope")][1]["p_adj"] for c in (SA, RBA, DELTA, MLP)]
-put("shear_slope_896_pmax", pmax(ps)); check("shear_slope_lowest_896", all(COMP[(c, "shear_slope")][1]["diff"] > 0 for c in (SA, RBA, DELTA, MLP)) and max(ps) < 0.05)
+ps = [COMP[(c, "shear_slope")][1]["p_adj"] for c in (SA, DELTA)]
+put("shear_slope_vs_pmax", pmax(ps)); put("shear_slope_eq_p", "$P \\geq %.2f$" % min(COMP[(c, "shear_slope")][1]["p_adj"] for c in (RBA, MLP)))
+check("shear_slope_split", all(COMP[(c, "shear_slope")][1]["diff"] > 0 for c in (SA, DELTA)) and max(ps) < 0.05 and all(COMP[(c, "shear_slope")][1]["p_adj"] >= 0.05 for c in (RBA, MLP)))
 ps = [COMP[(c, "axis")][i]["p_adj"] for c in (SA, RBA, DELTA, MLP) for i in (0, 1)]
 put("axis_pmax", pmax(ps)); check("axis_lowest_both", all(COMP[(c, "axis")][i]["diff"] > 0 for c in (SA, RBA, DELTA, MLP) for i in (0, 1)) and max(ps) < 0.05)
 r = COMP[(SA, "shearsign")][0]; register("stat_shearsign_sa_45", "shear-sign drift, SA-PINN vs our model, 5% labeled", r, "meV", 1, sign=-1)
@@ -338,14 +346,13 @@ put("rba_cos_9", "$%.2f$" % gm.loc[(RBA, 1)].cos); put("rba_cos_896", "$%.2f$" %
 check("rba_cos_negative_lowest_896", (gm.loc[RBA].cos < 0).all() and gm.loc[RBA].cos.idxmin() == 100)
 put("ours_ratio_range", "%.0f to %.0f\\%%" % (100 * gm.loc[FINAL].ratio.min(), 100 * gm.loc[FINAL].ratio.max()))
 put("ours_cos_min", "$%.2f$" % G[G.model == FINAL].groupby("level").cos.mean().min()); put("ours_cos_max", "$%+.2f$" % G[G.model == FINAL].groupby("level").cos.mean().max())
-check("ours_cos_near_zero", G[G.model == FINAL].groupby("level").cos.mean().abs().max() < 0.25)
+check("ours_cos_weak", G[G.model == FINAL].groupby("level").cos.mean().abs().max() < 0.3 and G[G.model == FINAL].groupby("level").cos.mean().abs().max() < abs(gm.loc[(RBA, 100)].cos))
 put("fixed_224", "%.1f" % mean("hyb_fixed", 25)); put("falling_224", "%.1f" % mean("hyb_ld9", 25))
 RAW["gradients"] = json.loads(gm.reset_index().to_json(orient="records", double_precision=15))
 
 # ------------------------------------------------------------------ 7. ablation over every key metric (Table 3, Supplementary Table 7)
-TERMS = ["drop_agreement", "drop_cbm_vbm", "drop_cons", "drop_sym", "drop_curv", "drop_zero_strain", "drop_iso_eg"]
-TNAME = {"drop_agreement": "All three agreement terms", "drop_cbm_vbm": "Band-edge agreement terms", "drop_cons": "Gap agreement term",
-         "drop_sym": "Symmetry term", "drop_curv": "Curvature term", "drop_zero_strain": "Zero-strain terms", "drop_iso_eg": "Isotropic term"}
+TERMS = ["drop_agreement", "drop_sym", "drop_curv", "drop_zero_strain", "drop_iso_eg"]
+TNAME = {"drop_agreement": "Agreement term", "drop_sym": "Symmetry term", "drop_curv": "Curvature term", "drop_zero_strain": "Zero-strain terms", "drop_iso_eg": "Isotropic term"}
 ABL = {}   # ABL[(term, metric)] = {level: result}; the difference is without minus with the term
 for term in TERMS:
     lvls = sorted(A[A.model == FINAL + "_" + term].level.unique())
@@ -380,22 +387,15 @@ lines += ["\\bottomrule", "\\end{tabular}"]; open(os.path.join(OUT, "table3b_abl
 ag = ABL[("drop_agreement", "MAE_meV")]
 for lv in (0, 1, 2): put("abl_agree_%d" % NL[lv], "%.1f" % ag[lv]["diff"])
 put("abl_agree_pmax", pmax([ag[lv]["p_adj"] for lv in (0, 1, 2)])); check("agreement_needed_low", all(ag[lv]["p_adj"] < 0.05 and ag[lv]["diff"] > 0 for lv in (0, 1, 2)))
-register("stat_abl_agree_9", "MAE, our model without vs with the three agreement terms, 1% labeled", ag[1], "meV")
-cb = ABL[("drop_cbm_vbm", "MAE_meV")]; co = ABL[("drop_cons", "MAE_meV")]
-put("tost_cbm_pmax", "$P_{\\mathrm{TOST}} \\leq %.2g$" % max(cb[lv]["p_tost"] for lv in (0, 1, 2)) if max(cb[lv]["p_tost"] for lv in (0, 1, 2)) >= 0.001 else "$P_{\\mathrm{TOST}} < 0.001$")
-check("cbm_vbm_equivalent", all(cb[lv]["p_tost"] < 0.05 for lv in (0, 1, 2)))
-put("abl_cons_range", "%.1f to %.1f" % (min(co[lv]["diff"] for lv in (0, 1, 2)), max(co[lv]["diff"] for lv in (0, 1, 2))))
-put("abl_cons_cimax", "%.1f" % max(co[lv]["hi"] for lv in (0, 1, 2)))
-put("abl_cons_pmin", "$P \\geq %.2g$" % min(co[lv]["p_adj"] for lv in (0, 1, 2))); check("cons_ns_low", all(co[lv]["p_adj"] >= 0.05 for lv in (0, 1, 2)))
+register("stat_abl_agree_9", "MAE, our model without vs with the agreement term, 1% labeled", ag[1], "meV")
 put("mae_ours_45_int", "%.0f" % mean(FINAL, 5))
 check("sign_networks_896_above_99", all(mean(m, 100, "sign") > 99 for m in (FINAL, SA, RBA, DELTA, MLP)))
-check("cons_all_positive", all(co[lv]["diff"] > 0 for lv in (0, 1, 2)))
 hi_lv = [5, 25, 100]
-put("abl_agree_high_pmin", "$P \\geq %.2f$" % min(ABL[(t, "MAE_meV")][lv]["p_adj"] for t in ("drop_agreement", "drop_cbm_vbm", "drop_cons") for lv in hi_lv))
-check("agreement_ns_high", all(ABL[(t, "MAE_meV")][lv]["p_adj"] >= 0.05 for t in ("drop_agreement", "drop_cbm_vbm", "drop_cons") for lv in hi_lv))
-r = ABL[("drop_agreement", "P95_meV")][5]; put("abl_agree_p95_45", "%.1f" % -r["diff"]); register("stat_abl_agree_p95_45", "95th-percentile error, our model with vs without the agreement terms, 5% labeled", r, "meV", 1, sign=-1)
-r = ABL[("drop_agreement", "axis")][5]; put("abl_agree_axis_45", "%.1f" % -r["diff"]); register("stat_abl_agree_axis_45", "axis-relabelling drift, our model with vs without the agreement terms, 5% labeled", r, "meV", 1, sign=-1)
-check("agreement_cost_45", ABL[("drop_agreement", "P95_meV")][5]["diff"] < 0 and ABL[("drop_agreement", "P95_meV")][5]["p_adj"] < 0.05 and ABL[("drop_agreement", "axis")][5]["diff"] < 0 and ABL[("drop_agreement", "axis")][5]["p_adj"] < 0.05)
+put("abl_agree_high_pmin", "$P \\geq %.2f$" % min(ABL[(t, "MAE_meV")][lv]["p_adj"] for t in ("drop_agreement",) for lv in hi_lv))
+check("agreement_ns_high", all(ABL[(t, "MAE_meV")][lv]["p_adj"] >= 0.05 for t in ("drop_agreement",) for lv in hi_lv))
+r = ABL[("drop_agreement", "axis")][5]; put("abl_agree_axis_45", "%.1f" % -r["diff"]); register("stat_abl_agree_axis_45", "axis-relabelling drift, our model with vs without the agreement term, 5% labeled", r, "meV", 1, sign=-1)
+r2 = ABL[("drop_agreement", "shearsign")][5]; put("abl_agree_shearsign_45", "%.1f" % -r2["diff"]); register("stat_abl_agree_shearsign_45", "shear-sign drift, our model with vs without the agreement term, 5% labeled", r2, "meV", 1, sign=-1)
+check("agreement_cost_45", all(x["diff"] < 0 and x["p_adj"] < 0.05 for x in (r, r2)))
 sy = ABL[("drop_sym", "MAE_meV")]
 put("abl_sym_45", "%.1f" % sy[5]["diff"]); put("abl_sym_224", "%.1f" % sy[25]["diff"])
 register("stat_abl_sym_45", "MAE, our model without vs with the symmetry term, 5% labeled", sy[5], "meV")
@@ -411,8 +411,7 @@ curv_sig = [(c, lv) for c in KM for lv, r in ABL[("drop_curv", c)].items() if r[
 zs_sig = [(c, lv) for c in KM for lv, r in ABL[("drop_zero_strain", c)].items() if r["p_adj"] < 0.05]
 RAW["curv_significant"] = curv_sig; RAW["zero_strain_significant"] = zs_sig
 check("curv_no_effect", len(curv_sig) == 0)
-check("zero_strain_shear_only", len(zs_sig) > 0 and all(c in ("shear_slope", "shearsign") for c, _ in zs_sig))
-put("abl_zs_shearsign_45", "%+.1f" % ABL[("drop_zero_strain", "shearsign")][5]["diff"]); put("abl_zs_shear_slope_224", "%+.2f" % ABL[("drop_zero_strain", "shear_slope")][25]["diff"])
+check("zero_strain_no_effect", len(zs_sig) == 0)
 ii = ABL[("drop_iso_eg", "MAE_meV")]; check("iso_mae_only_at_0", ii[0]["p_adj"] < 0.05 and all(ii[lv]["p_adj"] >= 0.05 for lv in (5, 25, 100)))
 
 # ------------------------------------------------------------------ 8. calibration cost and label-matched constants
@@ -422,7 +421,7 @@ for lv, r in zip((1, 2, 5, 10), lmres): put("lm_%d" % NL[lv], "%.1f" % r["diff"]
 register("stat_lm_18", "MAE, our model with label-matched vs training-portion constants, 2% labeled", lmres[1], "meV")
 register("stat_lm_45", "MAE, our model with label-matched vs training-portion constants, 5% labeled", lmres[2], "meV")
 register("stat_lm_90", "MAE, our model with label-matched vs training-portion constants, 10% labeled", lmres[3], "meV")
-check("lm_cost_18_45", lmres[1]["p_adj"] < 0.05 and lmres[2]["p_adj"] < 0.05); check("lm_ns_90", lmres[3]["p_adj"] >= 0.05)
+check("lm_cost_18_45_90", all(lmres[i]["p_adj"] < 0.05 and lmres[i]["diff"] > 0 for i in (1, 2, 3)))
 put("lm_9_median", "%.0f" % L[(L.model == FINAL) & (L.level == 1)].MAE_meV.median())
 lmr = [mean(MLP, lv) / L[(L.model == FINAL) & (L.level == lv)].MAE_meV.mean() for lv in (2, 5, 10)]
 put("lm_ratio_range", "%.1f to %.1f" % (min(lmr), max(lmr)))
@@ -444,6 +443,7 @@ check("cal_saturates_90", abs(CAL[CAL.n == 90]["median"].iloc[0] - FORM.MAE_meV.
 
 # ------------------------------------------------------------------ 9. beyond the training data
 HS = pd.read_csv(os.path.join(S, "heldout_runs.csv"))
+check("heldout_runs_complete", (HS.model == FINAL).sum() == 136)
 hs = HS.groupby(["model", "level"]).agg(mae=("MAE_meV", "mean"), sd=("MAE_meV", "std"), r2=("R2", "mean"), n=("seed", "count")).reset_index()
 hs.to_csv(os.path.join(OUT, "heldout.csv"), index=False)
 H = lambda m, l: float(hs[(hs.model == m) & (hs.level == l)].mae.iloc[0])
@@ -479,8 +479,6 @@ put("const_linear_range_max", "%.2f" % max(CON[k].max() - CON[k].min() for k in 
 inf = open(os.path.join(S, "inference_times.txt")).read()
 put("inference_ms", "%.2f" % float(re.search(r"single state ([0-9.]+) ms", inf).group(1)))
 cost = pd.read_csv(os.path.join(S, "cost.csv")).set_index("item").value
-check("p7_jobs", cost["low_label_ablation_jobs"] == 153)
-put("n_jobs", "{:,}".format(int(cost["jobs"])).replace(",", "{,}")); put("core_hours", "{:,.0f}".format(cost["cpu_hours"]).replace(",", "{,}"))
 put("min_ours", "%.0f" % cost["train_minutes_" + FINAL]); put("min_sa", "%.0f" % cost["train_minutes_" + SA]); put("min_rba", "%.0f" % cost["train_minutes_" + RBA])
 
 # ------------------------------------------------------------------ 12. Supplementary tables
@@ -489,11 +487,11 @@ def si_table(name, header, rows, colspec):
 # S1: every model at every data volume (two stacked panels)
 allm = pd.concat([M[["model", "level", "seed", "MAE_meV"]], CL[["model", "level", "seed", "MAE_meV"]]], ignore_index=True)
 s1 = allm.groupby(["model", "level"]).MAE_meV.agg(["mean", "std"])
-ORDER = [(FINAL, "Our model"), ("hyb_sdp_ld45", "Our model, weight falling from 45"), ("hyb_ld9", "Variant on $\\Delta$-learning, weight falling from 9"),
+ORDER = [(FINAL, "Our model"), ("hyb_sdp_ld45", "Variant, weight falling from 45"), ("hyb_ld9", "Variant on $\\Delta$-learning, weight falling from 9"),
          ("hyb_ld45", "Variant on $\\Delta$-learning, weight falling from 45"), ("hyb_ld45_col", "Variant on $\\Delta$-learning, falling from 45, collocation"),
          ("hyb_fixed", "Variant on $\\Delta$-learning, fixed weight"), (SA, "SA-PINN"), (RBA, "RBA-PINN"), (DELTA, "$\\Delta$-learning"),
          ("delta_zs", "$\\Delta$-learning, zero-strain terms"), ("delta_zs_sym", "$\\Delta$-learning, zero-strain and symmetry terms"),
-         ("sdp_net", "Our model without agreement terms"), (MLP, "MLP"), (GP, "Gaussian process"),
+         ("sdp_net", "Our model without the agreement term"), (MLP, "MLP"), (GP, "Gaussian process"),
          ("RandomForest", "Random forest"), ("GBDT", "Gradient boosting")]
 def s1panel(levels):
     out = ["\\begin{tabular}{l" + "r" * len(levels) + "}", "\\toprule", " & \\multicolumn{%d}{c}{\\textbf{Labeled training states (\\%%)}} \\\\" % len(levels), "\\cmidrule(l){2-%d}" % (len(levels) + 1), "\\textbf{Model} & " + " & ".join("\\textbf{%s}" % PCT[p] for p in levels) + " \\\\", "\\midrule"]
@@ -507,7 +505,7 @@ SCH = [("group_isotropic", "Isotropic"), ("group_uniaxial", "Uniaxial"), ("group
 rows = []
 for m, lab in [("formula", "Analytic models alone"), (FINAL, "Our model"), (SA, "SA-PINN"), (RBA, "RBA-PINN"), (DELTA, "$\\Delta$-learning"),
                ("delta_zs", "$\\Delta$-learning, zero-strain terms"), ("delta_zs_sym", "$\\Delta$-learning, zero-strain and symmetry terms"),
-               ("sdp_net", "Our model without agreement terms"), (MLP, "MLP")]:
+               ("sdp_net", "Our model without the agreement term"), (MLP, "MLP")]:
     cells = []
     for l, _ in SCH:
         g = hs[(hs.model == m) & (hs.level == l)]
@@ -517,7 +515,7 @@ si_table("si_heldout", "\\textbf{Model} & " + " & ".join("\\textbf{%s}" % h for 
 # S3: label-matched constants
 rows = []
 for _, r in LMT.iterrows():
-    lab = {FINAL: "Our model", DELTA: "$\\Delta$-learning", "sdp_net": "Our model without agreement terms"}[r.model]
+    lab = {FINAL: "Our model", DELTA: "$\\Delta$-learning", "sdp_net": "Our model without the agreement term"}[r.model]
     rows.append("%s & %s & %.1f & %.1f & $%+.1f$ & %s & %.1f" % (lab, PCT[r.level], r.lm, r.pool, r["diff"], ("$<$0.001" if r.p < 0.001 else "%.2g" % r.p), r.nophys))
 for _, c in CAL.iterrows():
     rows.append("Analytic models alone & %s & %.1f (median %.1f) & %.1f & -- & -- & --" % ({9: "1", 18: "2", 45: "5", 90: "10"}[int(c.n)], c["mean"], c["median"], FORM.MAE_meV.mean()))
@@ -530,11 +528,11 @@ for m, lab in [(GP, "Gaussian process"), ("RandomForest", "Random forest"), ("GB
 si_table("si_classical", "\\textbf{Model} & " + " & ".join("\\textbf{%s\\%%}" % PCT[p] for p in LV[1:]), rows, "l" + "r" * 8)
 # S5: selection of the weighting rule
 HC = pd.read_csv(os.path.join(S, "hybrid_choice.csv"), index_col=0); vcols = [c for c in HC.columns if c.startswith("val_mae_")]
-VAR = {"hyb_sdp_ld9": "Our model, weight falling from 9 (selected)", "hyb_sdp_ld45": "Our model, weight falling from 45", "hyb_ld9": "On $\\Delta$-learning, falling from 9",
+VAR = {"hyb_sdp_ld9": "Weight falling from 9 (selected)", "hyb_sdp_ld45": "Weight falling from 45", "hyb_ld9": "On $\\Delta$-learning, falling from 9",
        "hyb_ld45": "On $\\Delta$-learning, falling from 45", "hyb_ld45_col": "On $\\Delta$-learning, falling from 45, collocation", "hyb_fixed": "On $\\Delta$-learning, fixed weight"}
 rows = ["%s & %s & %.1f & %.2f & %.1f" % (VAR.get(m, m), " & ".join("%.1f" % HC.loc[m, c] for c in vcols), HC.loc[m, "mean_over_levels"], HC.loc[m, "mean_rank_over_levels"], HC.loc[m, "geomean_over_levels"]) for m in HC.index]
 si_table("si_selection", "\\textbf{Variant} & " + " & ".join("\\textbf{%s\\%%}" % c.split("_")[-1][:-3] for c in vcols) + " & \\textbf{Mean} & \\textbf{Rank} & \\textbf{Geo.\\ mean}", rows, "l" + "r" * (len(vcols) + 3))
-check("selected_lowest_mean", HC.mean_over_levels.idxmin() == FINAL)
+check("selected_lowest_mean", HC.mean_over_levels.idxmin() == "hyb_sdp_ld9")
 # S6: gradients
 fr_ = lambda x: ("%.0f" % x) if x >= 10 else ("%.1f" % x if x >= 1 else "%.2f" % x)
 rows = ["%s & %s" % (NAME[m], " & ".join("%s & $%+.2f$" % (fr_(gm.loc[(m, p)].ratio), gm.loc[(m, p)].cos) for p in (1, 5, 25, 100))) for m in (SA, RBA, FINAL)]

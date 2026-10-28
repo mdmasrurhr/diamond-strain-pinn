@@ -28,8 +28,9 @@ SDP = ("rba", NEW + ["--structured_head", "--sym_colloc", "1.0", "--curv_w", "0.
 
 # Model names of the paper (trainer mode, extra options). The trainer's --model selects the weighting rule:
 # sa_paper / rba_paper = the published SA-PINN / RBA-PINN updates; rba with --no_rba = fixed weights.
+GAP = SDP[1] + ["--drop_loss", "cbm", "--drop_loss", "vbm"]            # agreement with the analytic gap only
 MODELS = {
-    "hyb_sdp_ld9":  SDP,                                               # OUR MODEL: constants as outputs + agreement terms, s = min(1, 9/n)
+    "hyb_sdp_gap_ld9": (SDP[0], GAP),                                  # OUR MODEL: constants as outputs, gap agreement weighted by s = min(1, 9/n)
     "sa_pinn":      ("sa_paper", ["--slope_fix"]),                      # SA-PINN as published
     "rba_pinn":     ("rba_paper", ["--slope_fix"]),                     # RBA-PINN as published
     "mlp":          ("mlp", ["--no_rba"]),                              # MLP: data and isotropic terms only
@@ -37,20 +38,21 @@ MODELS = {
     "delta_zs":     ("rba", NEW + ["--residual_phys"]),                 # Delta-learning + zero-strain terms
     "delta_zs_sym": DZS,                                                # Delta-learning + zero-strain + symmetry terms
     "sdp_net":      SDP,                                                # our model without the agreement terms
-    # the six weighting variants among which our model was selected on validation error (select_weighting.py)
-    "hyb_sdp_ld45": SDP,                                                # our model, weight falling from 45 labeled states
+    # the six weighting variants among which the weighting rule was selected on validation error (select_weighting.py)
+    "hyb_sdp_ld9":  SDP,                                                # constants as outputs, weight falling from 9 labeled states (selected)
+    "hyb_sdp_ld45": SDP,                                                # constants as outputs, weight falling from 45 labeled states
     "hyb_fixed":    DZS,                                                # on Delta-learning, fixed weight
     "hyb_ld45":     DZS,                                                # on Delta-learning, weight falling from 45
     "hyb_ld9":      DZS,                                                # on Delta-learning, weight falling from 9
     "hyb_ld45_col": DZS,                                                # hyb_ld45 + formula-only collocation states
 }
-FINAL = "hyb_sdp_ld9"
+FINAL = "hyb_sdp_gap_ld9"
 VARIANTS = ["hyb_fixed", "hyb_ld45", "hyb_ld9", "hyb_sdp_ld45", "hyb_sdp_ld9", "hyb_ld45_col"]   # order of the selection table
 HELDOUT_MODELS = [FINAL, "sa_pinn", "rba_pinn", "mlp", "delta", "delta_zs", "delta_zs_sym", "sdp_net"]
 LM_FRACTIONS = [1, 2, 5, 10]
 
 # single-core minutes per run (workstation, all cores busy); only used to order the lists, longest first
-MIN = {"mlp": 14.9, "sa_pinn": 21.3, "rba_pinn": 18.7, "delta": 19.9, "delta_zs": 20.0, "delta_zs_sym": 22.5, "sdp_net": 49.8,
+MIN = {"hyb_sdp_gap_ld9": 49.8, "mlp": 14.9, "sa_pinn": 21.3, "rba_pinn": 18.7, "delta": 19.9, "delta_zs": 20.0, "delta_zs_sym": 22.5, "sdp_net": 49.8,
        "hyb_fixed": 22.5, "hyb_ld45": 22.5, "hyb_ld9": 22.5, "hyb_sdp_ld45": 49.8, "hyb_sdp_ld9": 49.8, "hyb_ld45_col": 40.0}
 
 
@@ -71,7 +73,7 @@ def colloc(n0):
 
 
 LEVEL_FLAGS = {"hyb_fixed": [agree(None)], "hyb_ld45": [agree(45)], "hyb_ld9": [agree(9)], "hyb_sdp_ld45": [agree(45)],
-               "hyb_sdp_ld9": [agree(9)], "hyb_ld45_col": [agree(45), colloc(45)]}
+               "hyb_sdp_ld9": [agree(9)], "hyb_sdp_gap_ld9": [agree(9)], "hyb_ld45_col": [agree(45), colloc(45)]}
 SUITE = {"group_isotropic": ["--split", "group", "--holdout_family", "isotropic"],
          "group_uniaxial": ["--split", "group", "--holdout_family", "uniaxial"],
          "group_biaxial": ["--split", "group", "--holdout_family", "biaxial"],
@@ -80,12 +82,11 @@ SUITE = {"group_isotropic": ["--split", "group", "--holdout_family", "isotropic"
          "magnitude_03": ["--split", "magnitude", "--magnitude_thresh", "0.03"],
          "magnitude_05": ["--split", "magnitude", "--magnitude_thresh", "0.05"],
          "magnitude_07": ["--split", "magnitude", "--magnitude_thresh", "0.07"]}
-ABLATION = {"drop_cbm_vbm": ["--drop_loss", "cbm", "--drop_loss", "vbm"], "drop_cons": ["--drop_loss", "cons"],
-            "drop_agreement": ["--drop_loss", "cons", "--drop_loss", "cbm", "--drop_loss", "vbm"],
-            "drop_zero_strain": ["--drop_loss", "anchor", "--drop_loss", "pcbm", "--drop_loss", "pvbm"],
+ABLATION = {"drop_zero_strain": ["--drop_loss", "anchor", "--drop_loss", "pcbm", "--drop_loss", "pvbm"],
             "drop_iso_eg": ["--drop_loss", "iso_eg"], "drop_sym": ["--sym_colloc", "0"], "drop_curv": ["--curv_w", "0"]}
-ABLATION_LEVELS = {"drop_cbm_vbm": [0, 1, 2, 5, 25, 100], "drop_cons": [0, 1, 2, 5, 25, 100], "drop_agreement": [0, 1, 2, 5, 25, 100],
-                   "drop_iso_eg": [0, 5, 25, 100], "drop_zero_strain": [5, 25, 100], "drop_sym": [5, 25, 100], "drop_curv": [5, 25, 100]}
+ABLATION_LEVELS = {"drop_iso_eg": [0, 5, 25, 100], "drop_zero_strain": [5, 25, 100], "drop_sym": [5, 25, 100], "drop_curv": [5, 25, 100]}
+# without the agreement term: no agreement term at all (a folder of its own, since it is a different objective)
+NOAGREE = ["--drop_loss", "cons", "--drop_loss", "cbm", "--drop_loss", "vbm"]; NOAGREE_LEVELS = [0, 1, 2, 5, 25, 100]
 
 
 def lflags(name, p):
@@ -122,9 +123,13 @@ def labelmatched_runs():
 
 def ablation_runs():
     m, ex = MODELS[FINAL]
-    return [(cmd(m, s, p, "results/B_ablation/%s_%s/%dpct/seed%d" % (FINAL, dname, p, s), ["--split", "symmetry"] + list(ex) + lflags(FINAL, p) + fl,
+    runs = [(cmd(m, s, p, "results/B_ablation/%s_%s/%dpct/seed%d" % (FINAL, dname, p, s), ["--split", "symmetry"] + list(ex) + lflags(FINAL, p) + fl,
                  "%s/symmetry/const_seed%d.json" % (K, s)), MIN[FINAL])
             for dname, fl in ABLATION.items() for p in ABLATION_LEVELS[dname] for s in C.SEEDS]
+    m0, ex0 = MODELS["hyb_sdp_ld9"]                                     # the same objective without the agreement term
+    runs += [(cmd(m0, s, p, "results/B_ablation/hyb_sdp_ld9_drop_agreement/%dpct/seed%d" % (p, s), ["--split", "symmetry"] + list(ex0) + lflags("hyb_sdp_ld9", p) + NOAGREE,
+                  "%s/symmetry/const_seed%d.json" % (K, s)), MIN[FINAL]) for p in NOAGREE_LEVELS for s in C.SEEDS]
+    return runs
 
 
 def smoke_runs():
@@ -135,7 +140,7 @@ def smoke_runs():
     m, ex = MODELS[FINAL]
     out.append((cmd(m, 42, 100, "results/smoke/x_%s_group_shear" % FINAL, SUITE["group_shear"] + list(ex) + lflags(FINAL, 100),
                     "%s/group_shear/const_seed42.json" % K, 300), 1.0))
-    out.append((cmd(m, 42, 5, "results/smoke/a_%s_drop_agreement" % FINAL, ["--split", "symmetry"] + list(ex) + lflags(FINAL, 5) + ABLATION["drop_agreement"],
+    out.append((cmd(m, 42, 5, "results/smoke/a_%s_drop_zero_strain" % FINAL, ["--split", "symmetry"] + list(ex) + lflags(FINAL, 5) + ABLATION["drop_zero_strain"],
                     "%s/symmetry/const_seed42.json" % K, 300), 1.0))
     out.append((cmd(m, 42, 1, "results/smoke/lm_%s_1pct" % FINAL, ["--split", "symmetry"] + list(ex) + lflags(FINAL, 1),
                     "results/100_constants_labelmatched/1pct/const_seed42.json", 300), 1.0))
