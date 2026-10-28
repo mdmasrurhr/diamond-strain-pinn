@@ -475,6 +475,39 @@ lines += ["\\bottomrule", "\\end{tabular}"]; open(os.path.join(OUT, "table4_cons
 lin = ["XI_D", "XI_U", "XI_UP", "AV", "B_BP", "D_BP"]; put("const_linear_sd_max", "%.2f" % max(CON[k].std(ddof=1) for k in lin))
 put("const_linear_range_max", "%.2f" % max(CON[k].max() - CON[k].min() for k in lin))
 
+SE = pd.read_csv(os.path.join(S, "state_errors.csv"), index_col="sample_id")
+
+# ------------------------------------------------------------------ 10b. why shear is the hardest family (Supplementary Note 8)
+from scipy.spatial import cKDTree
+SEFAM = DATA.strain_type.map(fam_of).values; XS = DATA[SC].values; I1s = XS[:, :3].sum(1); cm = CON.mean()
+def _val(e): return cm["XI_D"] * I1s + cm["XI_U"] * e + cm["XI_Q"] * e ** 2 + cm["XI_C"] * I1s * e + cm["XI_Q2"] * I1s ** 2
+_d = np.stack([_val(XS[:, 2]) + 2 * cm["XI_UP"] * XS[:, 3], _val(XS[:, 2]) - 2 * cm["XI_UP"] * XS[:, 3], _val(XS[:, 1]) + 2 * cm["XI_UP"] * XS[:, 5],
+               _val(XS[:, 1]) - 2 * cm["XI_UP"] * XS[:, 5], _val(XS[:, 0]) + 2 * cm["XI_UP"] * XS[:, 4], _val(XS[:, 0]) - 2 * cm["XI_UP"] * XS[:, 4]], 1)
+_axis = _d.argmin(1) // 2; _srt = np.sort(_d, 1); _margin = _srt[:, 1] - _srt[:, 0]          # lowest valley axis; gap to the second-lowest valley (eV)
+_dist, _idx = cKDTree(XS).query(XS, k=7); _kp = DATA.cbm_kpt_index.values
+SH = pd.DataFrame(dict(fam=SEFAM, planes=DATA.n_shear_planes.values, margin=_margin, nn=_dist[:, 1:6].mean(1),
+                       axis_sw=[(_axis[_idx[i, 1:]] != _axis[i]).mean() for i in range(len(DATA))],
+                       grid_only=[((_kp[_idx[i, 1:]] != _kp[i]) & (_axis[_idx[i, 1:]] == _axis[i])).mean() for i in range(len(DATA))]))
+SH = SH.join(SE, how="inner")                                                                     # states that were in a test portion at least once
+sh = SH[SH.fam == "shear"]; mu = sh[sh.planes >= 2]; vc = mu[mu.axis_sw > 0]; nv = mu[mu.axis_sw == 0]
+sq = lambda d: float((d.err_ours ** 2).sum())
+for k in (1, 2, 3):
+    g = sh[sh.planes == k]; put("sh_n_%d" % k, "%d" % len(g)); put("sh_err_%d" % k, "%.1f" % g.err_ours.mean()); put("sh_mlp_%d" % k, "%.1f" % g.err_mlp.mean())
+put("sh_multi_share", "%.0f" % (100 * sq(mu) / sq(sh)))
+put("sh_vc_frac", "%.0f" % (100 * len(vc) / len(mu))); put("sh_vc_err", "%.1f" % vc.err_ours.mean()); put("sh_nvc_err", "%.1f" % nv.err_ours.mean())
+put("sh_vc_mlp", "%.1f" % vc.err_mlp.mean()); put("sh_vc_share", "%.0f" % (100 * sq(vc) / sq(sh)))
+go = mu[(mu.axis_sw == 0) & (mu.grid_only > 0)]; put("sh_grid_err", "%.1f" % go.err_ours.mean()); put("sh_grid_n", "%d" % len(go))
+near = mu[mu.margin < 0.3]; far = mu[mu.margin >= 0.3]
+put("sh_near_err", "%.1f" % near.err_ours.mean()); put("sh_far_err", "%.1f" % far.err_ours.mean()); put("sh_near_n", "%d" % len(near)); put("sh_far_n", "%d" % len(far))
+terc = pd.qcut(vc.nn, 3, labels=["dense", "middle", "sparse"]); te = vc.groupby(terc, observed=True).err_ours.mean()
+put("sh_dense_err", "%.1f" % te["dense"]); put("sh_mid_err", "%.1f" % te["middle"]); put("sh_sparse_err", "%.1f" % te["sparse"])
+put("sh_nn_ratio", "%.1f" % (sh[sh.planes == 3].nn.mean() / sh[sh.planes == 1].nn.mean()))
+check("shear_concentrated", sq(mu) / sq(sh) > 0.95 and sh[sh.planes == 1].err_ours.mean() < 5 and sh[sh.planes == 3].err_ours.mean() > 20)
+check("shear_valley_crossings", vc.err_ours.mean() > 3 * nv.err_ours.mean() and sq(vc) / sq(sh) > 0.9)
+check("shear_grid_not_cause", go.err_ours.mean() < 8 and go.err_ours.mean() < vc.err_ours.mean() / 3)
+check("shear_density_trend", te["dense"] < te["middle"] < te["sparse"] and sh[sh.planes == 3].nn.mean() > 2 * sh[sh.planes == 1].nn.mean())
+SH.assign(valley_change=SH.axis_sw > 0).to_csv(os.path.join(OUT, "shear_states.csv"))
+
 # ------------------------------------------------------------------ 11. cost
 inf = open(os.path.join(S, "inference_times.txt")).read()
 put("inference_ms", "%.2f" % float(re.search(r"single state ([0-9.]+) ms", inf).group(1)))

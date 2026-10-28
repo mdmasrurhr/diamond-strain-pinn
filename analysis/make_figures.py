@@ -1,4 +1,4 @@
-"""Stage 3 of the paper's analysis: Figures 2-5 and Supplementary Figures 1-3 (Figure 1 is TikZ: analysis/fig1_workflow.tex).
+"""Stage 3 of the paper's analysis: Figures 2-5 and Supplementary Figures 1-6 (Figure 1 is TikZ: analysis/fig1_workflow.tex).
 
 Reads summary/ and outputs/tables/numbers.json (run make_tables.py first) and writes outputs/figures/ (PDF) and
 outputs/figures/preview/ (PNG). Style follows the journal: Arial-type lettering (Liberation Sans, a TrueType font that
@@ -239,3 +239,42 @@ ax[2].set_xlabel("Grid point holding the\nconduction-band minimum"); ax[2].set_y
 fig.legend(handles=[Line2D([], [], color=FCOL[f], marker=FMK[f], ls="", ms=4, label=f) for f in FAMS], frameon=False, ncol=5,
            loc="lower center", bbox_to_anchor=(0.5, -0.02))
 fig.tight_layout(rect=(0, 0.09, 1, 1), w_pad=1.6); save(fig, "sfig4_dataset", si=True)
+
+# ------------------------------------------------------------------ Supplementary Figure 5: gradients of the physics and data terms through training
+GT = pd.read_csv(os.path.join(S, "gradients_training.csv"))
+fig, ax = plt.subplots(2, 3, figsize=(W, 4.4), sharex=True)
+for j, pct in enumerate((5, 25, 100)):
+    for m in (SA, RBA, FINAL):
+        g = GT[(GT.model == m) & (GT.level == pct) & (GT.epoch >= 250)].sort_values("epoch")
+        ax[0, j].plot(g.epoch, g.ratio_median, color=STY[m]["c"], ls=STY[m]["ls"], lw=1.2, label=STY[m]["lab"]); ax[1, j].plot(g.epoch, g.cos_mean, color=STY[m]["c"], ls=STY[m]["ls"], lw=1.2)
+    ax[0, j].set_yscale("log"); ax[0, j].set_ylim(0.005, 3000); plain_log(ax[0, j].yaxis, [0.01, 0.1, 1, 10, 100, 1000]); ax[0, j].axhline(1, color="black", lw=0.75, ls=":")
+    ax[1, j].set_ylim(-1, 1); ax[1, j].axhline(0, color="black", lw=0.75, ls=":")
+    ax[1, j].set_xlim(0, 24000); ax[1, j].set_xticks([0, 12000, 24000]); ax[1, j].set_xticklabels(["0", "12,000", "24,000"]); ax[1, j].set_xlabel("Training iteration")
+    letter(ax[0, j], "abc"[j], x=-0.27); letter(ax[1, j], "def"[j], x=-0.27)
+    if j > 0: ax[0, j].set_yticklabels([]); ax[1, j].set_yticklabels([])
+ax[0, 0].set_ylabel("Physics gradient / data gradient"); ax[1, 0].set_ylabel("Cosine between the gradients")
+fig.legend(handles=legend_handles([SA, RBA, FINAL], "line"), frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.5, -0.02))
+fig.tight_layout(rect=(0, 0.07, 1, 1), w_pad=1.2, h_pad=1.2); save(fig, "sfig5_gradients", si=True)
+
+# ------------------------------------------------------------------ Supplementary Figure 6: where the shear error sits
+SHD = pd.read_csv(os.path.join(TAB, "shear_states.csv"), index_col=0); SHD = SHD[SHD.fam == "shear"]
+fig, ax = plt.subplots(1, 3, figsize=(W, 2.9), gridspec_kw={"width_ratios": [1, 1, 1.15]})
+def strips(a, groups, labels):
+    for i, g in enumerate(groups):
+        for j, (col, m) in enumerate((("err_ours", FINAL), ("err_mlp", MLP))):
+            v = np.maximum(g[col].values, 0.05); x = i + (j - 0.5) * 0.36
+            a.scatter(x + rng.uniform(-0.1, 0.1, len(v)), v, s=2.5, color=STY[m]["c"], alpha=0.35, linewidths=0, zorder=2)
+            a.plot([x - 0.14, x + 0.14], [g[col].mean()] * 2, color="black", lw=1.5, zorder=4)
+    a.set_yscale("log"); a.set_ylim(0.05, 400); plain_log(a.yaxis, [0.1, 1, 10, 100]); a.set_xticks(range(len(groups))); a.set_xticklabels(labels); a.set_xlim(-0.6, len(groups) - 0.4)
+strips(ax[0], [SHD[SHD.planes == k] for k in (1, 2, 3)], ["1", "2", "3"]); ax[0].set_xlabel("Sheared planes"); ax[0].set_ylabel("Error per test state (meV)"); letter(ax[0], "a", x=-0.28)
+M23 = SHD[SHD.planes >= 2]
+strips(ax[1], [M23[~M23.valley_change], M23[M23.valley_change]], ["same", "different"]); ax[1].set_xlabel("Lowest conduction valley\nof the neighbouring states"); letter(ax[1], "b", x=-0.28); ax[1].set_yticklabels([])
+for k, mk in ((1, "o"), (2, "s"), (3, "^")):
+    g = SHD[SHD.planes == k]; ax[2].scatter(np.maximum(g.margin * 1000, 1), np.maximum(g.err_ours, 0.05), s=6, marker=mk, color="#009E73", alpha=0.6, linewidths=0, label="%d plane%s" % (k, "" if k == 1 else "s"))
+ax[2].axvline(300, color="black", lw=0.75, ls="--"); ax[2].set_xscale("log"); ax[2].set_yscale("log"); ax[2].set_ylim(0.05, 400); plain_log(ax[2].yaxis, [0.1, 1, 10, 100]); plain_log(ax[2].xaxis, [1, 10, 100, 1000])
+ax[2].set_xlabel("Margin between the two lowest\nconduction valleys (meV)"); letter(ax[2], "c", x=-0.28); ax[2].set_yticklabels([])
+fig.legend(handles=[Line2D([], [], color=STY[FINAL]["c"], marker="o", ls="", ms=4, label="Our model"), Line2D([], [], color=STY[MLP]["c"], marker="o", ls="", ms=4, label="MLP"),
+                    Line2D([], [], color="black", lw=1.5, label="Mean"), Line2D([], [], color="#555555", marker="o", ls="", ms=3.5, label="1 plane (c)"),
+                    Line2D([], [], color="#555555", marker="s", ls="", ms=3.5, label="2 planes (c)"), Line2D([], [], color="#555555", marker="^", ls="", ms=3.5, label="3 planes (c)")],
+           frameon=False, ncol=6, loc="lower center", bbox_to_anchor=(0.5, -0.02), columnspacing=1.0, handletextpad=0.3)
+fig.tight_layout(rect=(0, 0.1, 1, 1), w_pad=1.0); save(fig, "sfig6_shear", si=True)

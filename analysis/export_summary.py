@@ -21,6 +21,7 @@ repository.
   sa_weights.csv           mean SA-PINN weight of each physics term at the end of training, per run
   curves.csv               mean training and lowest-validation MAE curves, every 10th iteration (Figure 4a,
                            Supplementary Figure 2)
+  state_errors.csv         error of our model and of the MLP per state, all training states labeled (mean over the runs that tested it)
   parity_median_run.csv    test predictions of the median run of our model with all training states labeled (Figure 5a)
   cost.csv                 mean training time of one run of our model, SA-PINN and RBA-PINN (minutes, one core)
   inference_times.txt      prediction time of a trained model
@@ -159,6 +160,14 @@ for m in (SA, RBA, MLP, FINAL):
                                      train_mean=np.nanmean([x[:n] for x in tr_], axis=0))))
 cur = pd.concat(cur); cur = cur[(cur.epoch % 10 == 0) | (cur.epoch == 1)]   # every 10th iteration is enough to draw the curves
 cur.to_csv(os.path.join(OUT, "curves.csv"), index=False, float_format="%.6g")
+
+# ---------------------------------------------------------------- per-state errors with all training states labeled (shear analysis)
+_se = {}
+for _m, _col in ((FINAL, "err_ours"), (MLP, "err_mlp")):
+    for _f in glob.glob(os.path.join(R, "B_main", _m, "100pct", "seed*", "test_results.csv")):
+        _t = pd.read_csv(_f)
+        for _i, _e in zip(_t.sample_id.values, (_t.Eg_pred_eV - _t.Eg_true_eV).abs().values * 1000): _se.setdefault((int(_i), _col), []).append(_e)
+pd.DataFrame({c: pd.Series({i: np.mean(v) for (i, cc), v in _se.items() if cc == c}) for c in ("err_ours", "err_mlp")}).dropna().rename_axis("sample_id").to_csv(os.path.join(OUT, "state_errors.csv"), float_format="%.6g")
 
 # ---------------------------------------------------------------- Figure 5a: the median run of our model, all labeled
 f100 = M[(M.model == FINAL) & (M.level == 100)].sort_values("MAE_meV"); med = f100.iloc[len(f100) // 2]
