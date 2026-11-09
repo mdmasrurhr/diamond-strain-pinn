@@ -2,6 +2,8 @@
 results/*
 !results/98_constants_v2/
 !results/100_constants_labelmatched/
+!results/98_constants_2band/
+!results/100_constants_labelmatched_2band/
 
 # Generated task lists, cluster logs, smoke runs and figure previews
 tasks/

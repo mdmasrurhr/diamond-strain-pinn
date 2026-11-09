@@ -3,18 +3,24 @@
    of the 3x3 matrix with (B + B2*dev)*dev on the diagonal and D*e_ab off the diagonal.
 2. Joint least squares over all 13 constants on the CBM, VBM and gap residuals together, a ridge penalty on the five
    higher-order constants (strength chosen by 5-fold cross-validation inside the training portion), and several starting
-   points for the shear coupling D."""
+   points for the shear coupling D.
+3. two_band=True adds the band separation DELTA_X of the conduction-band shear term (physics.shear_shift) as a 14th
+   constant, bounded to 0.05-10 eV and started from several values."""
 import numpy as np
 from scipy.optimize import least_squares
 import physics as P
 
 KEYS = P.CBM_KEYS + P.VBM_KEYS            # 7 + 6
+KEYS2 = KEYS + ["DELTA_X"]                # two-band shear term
 HIGH = ["XI_Q", "XI_C", "XI_Q2", "AV2", "B2_BP"]
 HIGH_IDX = [KEYS.index(k) for k in HIGH]
 
 
+CBM_BETA = None   # None: exact minimum over the valleys; a number: fit in the soft-minimum form used in training (calibrate_constants.py --softmin)
+
+
 def cbm_form(s, th):
-    return P.cbm_numpy(s, *th[:7])
+    return P.cbm_numpy(s, *th[:7], delta=th[13] if len(th) > 13 else 0.0, beta=CBM_BETA)
 
 
 def vbm_form(s, th, eps=1e-8):
@@ -40,11 +46,14 @@ def _fit(s, c, v, lam, x0, w_gap=1.0):
         r = [cp - c, vp - v, w_gap * ((cp - vp) - (c - v))]
         if lam > 0: r.append(np.sqrt(lam * n) * th[HIGH_IDX] / sc)
         return np.concatenate(r)
-    return least_squares(res, x0, method="trf", max_nfev=4000)
+    lo, hi = np.full(len(x0), -np.inf), np.full(len(x0), np.inf)
+    if len(x0) > 13: lo[13], hi[13] = 0.05, 10.0
+    return least_squares(res, x0, method="trf", bounds=(lo, hi), max_nfev=4000)
 
 
-def fit_constants(s, c, v, lams=(0.0, 1e-4, 1e-3, 1e-2, 1e-1), d_starts=(-4.0, -1.0, 1.0, 4.0), seed=0, return_info=False):
-    """Fit on (strain, CBM, VBM) of a training portion. Returns dict of 13 constants."""
+def fit_constants(s, c, v, lams=(0.0, 1e-4, 1e-3, 1e-2, 1e-1), d_starts=(-4.0, -1.0, 1.0, 4.0), seed=0, return_info=False,
+                  two_band=False, delta_starts=(0.5, 1.0, 1.7, 3.0)):
+    """Fit on (strain, CBM, VBM) of a training portion. Returns dict of 13 constants (14 with two_band)."""
     base = np.array([float(getattr(P, k)) for k in KEYS])
     # multi-start on D with no penalty, to find the basin
     best = None
@@ -52,6 +61,12 @@ def fit_constants(s, c, v, lams=(0.0, 1e-4, 1e-3, 1e-2, 1e-1), d_starts=(-4.0, -
         x0 = base.copy(); x0[12] = d0
         r = _fit(s, c, v, 0.0, x0)
         if best is None or r.cost < best.cost: best = r
+    keys = KEYS
+    if two_band:      # start the 14-constant fit from the 13-constant basin, multi-start on DELTA_X
+        keys, lin = KEYS2, best.x; best = None
+        for g0 in delta_starts:
+            r = _fit(s, c, v, 0.0, np.append(lin, g0))
+            if best is None or r.cost < best.cost: best = r
     x_start = best.x
     # ridge strength by 5-fold cross-validation (gap MAE on the held-out fold)
     rng = np.random.default_rng(seed); folds = np.array_split(rng.permutation(len(s)), 5); cv = {}
@@ -64,5 +79,5 @@ def fit_constants(s, c, v, lams=(0.0, 1e-4, 1e-3, 1e-2, 1e-1), d_starts=(-4.0, -
         cv[lam] = float(np.mean(err))
     lam_best = min(cv, key=cv.get)
     th = _fit(s, c, v, lam_best, x_start).x
-    out = {k: float(x) for k, x in zip(KEYS, th)}
+    out = {k: float(x) for k, x in zip(keys, th)}
     return (out, dict(lambda_=lam_best, cv=cv)) if return_info else out

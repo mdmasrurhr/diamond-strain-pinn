@@ -31,6 +31,10 @@ XI_UP = 12.126672421097085
 XI_Q  = 12.984971351885598
 XI_C  = -29.582212007237697
 XI_Q2 = 18.18785190955848
+# Separation of the two lowest conduction bands at the valley minimum (eV). 0 selects the linear shear term
+# 2*XI_UP*|e_bc|; a positive value selects the two-band form at X (Hensel et al. 1965; Ungersboeck et al. 2007),
+# quadratic in shear below |e_bc| = DELTA_X / (4 XI_UP) and linear above.
+DELTA_X = 0.0
 
 # --- VBM extended Bir-Pikus constants (eV), defaults ---
 VBM_0  = 8.998824547791076
@@ -57,6 +61,31 @@ if _CONST_JSON:
             raise KeyError("PHYSICS_CONST_JSON: unknown constant " + str(_k))
 
 
+def shear_shift(e, xi_up, delta, lib=torch):
+    # Shift of the two valleys on one axis by the shear strain e in the plane normal to that axis. Both valleys
+    # (+k and -k) shift alike. delta = 0: linear form -2|xi_up e|. delta > 0: two-band form with
+    # eta = 4 xi_up e / delta: -(delta/4) eta^2 for |eta| < 1, -(delta/4)(2|eta| - 1) above.
+    if delta <= 0:
+        return -2.0 * lib.abs(xi_up * e)
+    eta = 4.0 * xi_up * e / delta
+    a = lib.abs(eta)
+    return lib.where(a < 1.0, -0.25 * delta * eta ** 2, -0.25 * delta * (2.0 * a - 1.0))
+
+
+def _valleys(valley, Exx, Eyy, Ezz, Exy, Eyz, Ezx, xi_up, lib, stack, delta=None):
+    # The six valley energies. With DELTA_X = 0 the pairs are valley +/- 2 xi_up e_bc, as fitted originally
+    # (their minimum is the linear form); otherwise each axis contributes two equal valleys.
+    delta = DELTA_X if delta is None else delta
+    if delta <= 0:
+        return stack([valley(Ezz) + 2.0*xi_up*Exy, valley(Ezz) - 2.0*xi_up*Exy,
+                      valley(Eyy) + 2.0*xi_up*Ezx, valley(Eyy) - 2.0*xi_up*Ezx,
+                      valley(Exx) + 2.0*xi_up*Eyz, valley(Exx) - 2.0*xi_up*Eyz])
+    z = valley(Ezz) + shear_shift(Exy, xi_up, delta, lib)
+    y = valley(Eyy) + shear_shift(Ezx, xi_up, delta, lib)
+    x = valley(Exx) + shear_shift(Eyz, xi_up, delta, lib)
+    return stack([z, z, y, y, x, x])
+
+
 def physics_cbm(strain, beta=None):
     # CBM via the 6-valley deformation-potential model.
     # beta=None  -> exact hard minimum (use for evaluation / the solver).
@@ -68,15 +97,7 @@ def physics_cbm(strain, beta=None):
     def valley(e_aa):
         return XI_D*I1 + XI_U*e_aa + XI_Q*e_aa**2 + XI_C*I1*e_aa + XI_Q2*I1**2
 
-    # Each axis contributes two valleys split by shear coupling (XI_UP).
-    deltas = torch.stack([
-        valley(Ezz) + 2.0*XI_UP*Exy,
-        valley(Ezz) - 2.0*XI_UP*Exy,
-        valley(Eyy) + 2.0*XI_UP*Ezx,
-        valley(Eyy) - 2.0*XI_UP*Ezx,
-        valley(Exx) + 2.0*XI_UP*Eyz,
-        valley(Exx) - 2.0*XI_UP*Eyz,
-    ], dim=1)
+    deltas = _valleys(valley, Exx, Eyy, Ezz, Exy, Eyz, Ezx, XI_UP, torch, lambda v: torch.stack(v, dim=1))
 
     if beta is None:
         return CBM_0 + torch.min(deltas, dim=1).values
@@ -124,15 +145,16 @@ CBM_KEYS = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2"]
 VBM_KEYS = ["VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]
 
 
-def cbm_numpy(s, cbm_0, xi_d, xi_u, xi_up, xi_q, xi_c, xi_q2):
-    # Arguments follow CBM_KEYS order.
+def cbm_numpy(s, cbm_0, xi_d, xi_u, xi_up, xi_q, xi_c, xi_q2, delta=None, beta=None):
+    # Arguments follow CBM_KEYS order. beta=None: exact minimum over the valleys; beta=float: the soft minimum of training.
     xx, yy, zz, xy, yz, zx = [s[:, i] for i in range(6)]
     i1 = xx + yy + zz
 
     def valley(e):
         return xi_d * i1 + xi_u * e + xi_q * e ** 2 + xi_c * i1 * e + xi_q2 * i1 ** 2
 
-    d = _np.stack([valley(zz) + 2 * xi_up * xy, valley(zz) - 2 * xi_up * xy,
-                   valley(yy) + 2 * xi_up * zx, valley(yy) - 2 * xi_up * zx,
-                   valley(xx) + 2 * xi_up * yz, valley(xx) - 2 * xi_up * yz], axis=1)
-    return cbm_0 + d.min(axis=1)
+    d = _valleys(valley, xx, yy, zz, xy, yz, zx, xi_up, _np, lambda v: _np.stack(v, axis=1), delta)
+    if beta is None:
+        return cbm_0 + d.min(axis=1)
+    m = d.min(axis=1)
+    return cbm_0 + m - _np.log(_np.exp(-beta * (d - m[:, None])).sum(axis=1)) / beta
