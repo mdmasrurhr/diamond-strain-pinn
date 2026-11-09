@@ -1,0 +1,52 @@
+# Settings of the analytic models alone (read by analytic.py).
+# Another file can be used with:  ANALYTIC_CONFIG=other.toml python analytic.py ...
+
+[study]
+first_seed = 42                   # seeds 42-58: 17 seeds, as in the paper
+last_seed = 58
+
+[data]
+strain_columns = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]   # Green-Lagrange strain, Voigt order (inputs)
+strain_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]
+test_share = 0.20                 # share of each strain class that goes to the test set
+validation_share = 0.10           # share of each strain class that goes to the validation set
+symmetry_decimals = 5             # rounding used to recognise two states as cubic images of each other
+label_seed_offset = 9999          # random stream of the labeled subset: seed + this
+isotropic_tolerance = 1e-4        # a state is isotropic when shear and diagonal spread are below this
+
+[experiments]
+heldout_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]   # group_<class>: this class is the test set
+heldout_magnitudes = [0.03, 0.05, 0.07]          # magnitude_<03|05|07>: states beyond this largest strain component are tested
+heldout_validation_share = 0.125                 # share of the remaining states that goes to validation
+labelmatched_fractions = [1, 2, 5, 10]           # constants fitted only on the labeled and isotropic training states
+
+[constants]
+constant_names = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",   # conduction band (7)
+                  "VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]                # valence band (6); DELTA_X is the 14th
+
+[physics]
+eigen_eps = 1e-8                  # added to the Bir-Pikus diagonal before the exact eigenvalues
+
+[fit]
+ridge_constants = ["XI_Q", "XI_C", "XI_Q2", "AV2", "B2_BP"]   # second-order constants, held small by a ridge penalty
+ridge_strengths = [0.0, 1e-4, 1e-3, 1e-2, 1e-1]               # chosen by cross-validation
+d_starts = [-4.0, -1.0, 1.0, 4.0]                             # starting values for d
+delta_x_starts = [0.5, 1.0, 1.7, 3.0]                         # starting values for the valley gap DELTA_X (eV)
+delta_x_bounds = [0.05, 10.0]
+folds = 5
+max_function_evals = 4000
+
+[fit.start]                       # first guess of the 13 constants; the fit replaces every value
+CBM_0 = 14.534980535287007
+XI_D = -24.84604763603144
+XI_U = 24.328031070892287
+XI_UP = 12.126672421097085
+XI_Q = 12.984971351885598
+XI_C = -29.582212007237697
+XI_Q2 = 18.18785190955848
+VBM_0 = 8.998824547791076
+AV = -14.238965719572148
+AV2 = 13.090080116642534
+B_BP = -7.177161522873087
+B2_BP = 70.41960340594974
+D_BP = -1.9671238909825762e-07

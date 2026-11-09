@@ -1,0 +1,32 @@
+# Settings of the conventional regression methods (read by conventional.py).
+# Another file can be used with:  CONVENTIONAL_CONFIG=other.toml python conventional.py ...
+
+[study]
+first_seed = 42                   # seeds 42-58: 17 seeds, as in the paper
+last_seed = 58
+fractions = [1, 2, 5, 10, 25, 50, 75, 100]   # percent of the training states that have DFT labels (0%: nothing to fit)
+
+[data]
+strain_columns = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]   # Green-Lagrange strain, Voigt order (inputs)
+strain_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]
+test_share = 0.20                 # share of each strain class that goes to the test set
+validation_share = 0.10           # share of each strain class that goes to the validation set
+symmetry_decimals = 5             # rounding used to recognise two states as cubic images of each other
+label_seed_offset = 9999          # random stream of the labeled subset: seed + this
+
+[gaussian_process]                # constant x radial basis function + white noise; hyperparameters by marginal likelihood
+amplitude_start = 1.0
+amplitude_bounds = [1e-3, 1e3]
+length_scale_start = 1.0
+length_scale_bounds = [1e-2, 1e2]
+noise_start = 1e-3
+noise_bounds = [1e-8, 10.0]
+restarts = 1                      # extra starts of the hyperparameter optimizer
+
+[random_forest]
+trees = 400
+jobs = 2                          # parallel jobs inside one forest (does not change the result)
+
+[gradient_boosting]               # histogram gradient boosting
+trees = 400
+learning_rate = 0.08
