@@ -30,16 +30,23 @@ authors:
     given-names: Damian
     affiliation: Ingram School of Engineering, Texas State University
 repository-code: https://github.com/mdmasrurhr/diamond-strain-pinn
+version: 1.0.0
+date-released: 2026-11-09
 abstract: >-
   Code and data for predicting the bandgap of strained diamond from the
   six-component Green-Lagrange strain tensor. The dataset holds 1,292
   deformation states computed with hybrid-functional DFT. The models combine
-  a neural network with deformation-potential and Bir-Pikus models of the band
-  edges; the repository includes every training run of the paper as a task
-  list, the calibration of the analytic models, the baselines, and the
-  analysis that produces every number, table and figure.
+  neural networks with deformation-potential and Bir-Pikus models of the band
+  edges. The repository contains one standalone script per model of the paper
+  (proposed hybrid model PHM, residual model, APHYNITY, SA-PINN, RBA-PINN,
+  NTK-PINN, MLP, conventional regression, analytic models alone), the commands
+  of all 2,924 training runs, the fitted constants of the analytic models,
+  condensed results of every run, and the analysis that recomputes every
+  table, number, statistical test and figure of the paper.
 keywords:
   - physics-informed neural network
+  - hybrid model
+  - machine learning
   - diamond
   - bandgap
   - strain engineering

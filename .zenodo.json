@@ -1,9 +1,11 @@
 {
-  "title": "Physics-informed neural networks for strain-dependent bandgaps in diamond",
-  "description": "<p>Code and data for predicting the bandgap of strained diamond from the six-component Green-Lagrange strain tensor. A neural network is combined with deformation-potential and Bir-Pikus models of how strain shifts the band edges.</p><p>Includes the dataset of 1,292 deformation states computed with hybrid-functional DFT, the VASP inputs and relaxed structures, the analytic models and their calibration, the training program, the task list of every training run of the paper, the baselines, summaries of all runs, and the analysis that produces every number, table and figure of the paper.</p>",
-  "license": "MIT",
+  "title": "Physics-informed neural networks for strain-dependent bandgaps in diamond: code and data",
+  "description": "<p>Code and data for the manuscript <em>Physics-informed neural networks for strain-dependent bandgaps in diamond</em>, submitted to Communications Materials. The models predict the bandgap of diamond under an arbitrary strain, given as the six components of the Green-Lagrange strain tensor, from 1,292 hybrid-functional DFT calculations and two analytic models of the band edges: deformation-potential theory for the conduction band and the Bir-Pikus model for the valence band.</p><p>The archive contains the reference dataset, the VASP input files and the relaxed structure of every state; one standalone script per model of the paper (proposed hybrid model PHM, residual model, APHYNITY, SA-PINN, RBA-PINN, NTK-PINN, MLP, conventional regression and the analytic models alone); the training program and the commands of all 2,924 training runs of the paper; the fitted constants of the analytic models; condensed results of every run; and the analysis that recomputes every table, number, statistical test and figure of the paper.</p>",
   "upload_type": "software",
+  "version": "1.0.0",
+  "license": "mit",
   "access_right": "open",
+  "language": "eng",
   "creators": [
     {
       "name": "Rakin, Md Masrur Hossain",
@@ -40,10 +42,13 @@
   ],
   "keywords": [
     "physics-informed neural network",
+    "hybrid model",
+    "machine learning",
     "diamond",
     "bandgap",
     "strain engineering",
     "density functional theory",
     "deformation potential"
-  ]
+  ],
+  "notes": "This work was supported by the National Science Foundation through the CREST Phase I Center for Ultrawide Bandgap Semiconductor Device Materials at Texas State University (award 2514718)."
 }
