@@ -1,0 +1,87 @@
+# Settings of the residual model (read by residual.py).
+# Another file can be used with:  RESIDUAL_CONFIG=other.toml python residual.py ...
+# Every run saves a copy of the settings it used (config_used.toml in its run folder).
+
+[study]
+first_seed = 42                   # seeds 42-58: 17 seeds, as in the paper
+last_seed = 58
+fractions = [0, 1, 2, 5, 10, 25, 50, 75, 100]   # percent of the training states that have DFT labels
+
+[data]
+strain_columns = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]   # Green-Lagrange strain, Voigt order (inputs)
+strain_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]
+test_share = 0.20                 # share of each strain class that goes to the test set
+validation_share = 0.10           # share of each strain class that goes to the validation set
+symmetry_decimals = 5             # rounding used to recognise two states as cubic images of each other
+image_decimals = 7                # rounding used to recognise repeated images of one labeled state
+label_seed_offset = 9999          # random stream of the labeled subset: seed + this
+copy_seed_offset = 4241           # random stream of the copied-label subsample: seed + this
+max_copied_labels = 2000          # at most this many copied symmetry images are used
+isotropic_tolerance = 1e-4        # a state is isotropic when shear and diagonal spread are below this
+
+[experiments]
+heldout_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]   # group_<class>: this class is the test set
+heldout_magnitudes = [0.03, 0.05, 0.07]          # magnitude_<03|05|07>: states beyond this largest strain component are tested
+heldout_validation_share = 0.125                 # share of the remaining states that goes to validation
+labelmatched_fractions = [1, 2, 5, 10]           # constants fitted only on the labeled and isotropic training states
+
+[network]
+constant_names = ["CBM_0", "XI_D", "XI_U", "XI_UP", "XI_Q", "XI_C", "XI_Q2",   # conduction band (7)
+                  "VBM_0", "AV", "AV2", "B_BP", "B2_BP", "D_BP"]                # valence band (6)
+corrections = 2                   # outputs: dCBM, dVBM, added to the analytic band edges
+hidden_layers = 8
+neurons = 64                      # per hidden layer, SiLU activation
+
+[training]
+iterations = 24000                # full-batch iterations
+switch_fraction = 0.5             # AdamW for the first half, SOAP for the second
+adamw_lr = 2.636e-3
+adamw_weight_decay = 1.793e-5
+adamw_betas = [0.9, 0.999]
+soap_lr = 7.325e-3
+soap_weight_decay = 1.224e-3
+soap_betas = [0.95, 0.95]
+soap_precondition_frequency = 10
+restart_period_adamw = 500        # cosine schedule with warm restarts: first period (iterations)
+restart_period_soap = 1000
+restart_growth = 2                # each period twice as long as the one before
+lr_min = 1e-5
+clip_norm = 1.0                   # gradient-norm clipping
+checkpoint_every = 250            # validation check; the best checkpoint is kept
+log_every = 10                    # iterations between rows of log.csv
+
+[loss]
+w_data = 5.0                      # CBM and VBM of the labeled states (and their copied images)
+w_isotropic = 5.0                 # gap of the isotropic training states
+w_symmetry = 1.0                  # same band edges for a strain state and a random cubic image of it
+agree_n_full = 9                  # gap agreement has full weight up to this many labeled states, then (9/n)^3
+n_train_nominal = 903             # nominal training-set size used in the agreement rule (as in the paper's runs)
+
+[physics]
+beta_cbm = 50.0                   # sharpness of the soft minimum over the conduction valleys (1/eV)
+beta_vbm = 200.0                  # sharpness of the smooth maximum over the valence bands (1/eV)
+eigen_eps = 1e-8                  # added to the Bir-Pikus diagonal before the exact eigenvalues
+
+[fit]
+ridge_constants = ["XI_Q", "XI_C", "XI_Q2", "AV2", "B2_BP"]   # second-order constants, held small by a ridge penalty
+ridge_strengths = [0.0, 1e-4, 1e-3, 1e-2, 1e-1]               # chosen by cross-validation
+d_starts = [-4.0, -1.0, 1.0, 4.0]                             # starting values for d
+delta_x_starts = [0.5, 1.0, 1.7, 3.0]                         # starting values for the valley gap DELTA_X (eV)
+delta_x_bounds = [0.05, 10.0]
+folds = 5
+max_function_evals = 4000
+
+[fit.start]                       # first guess of the 13 constants; the fit replaces every value
+CBM_0 = 14.534980535287007
+XI_D = -24.84604763603144
+XI_U = 24.328031070892287
+XI_UP = 12.126672421097085
+XI_Q = 12.984971351885598
+XI_C = -29.582212007237697
+XI_Q2 = 18.18785190955848
+VBM_0 = 8.998824547791076
+AV = -14.238965719572148
+AV2 = 13.090080116642534
+B_BP = -7.177161522873087
+B2_BP = 70.41960340594974
+D_BP = -1.9671238909825762e-07
