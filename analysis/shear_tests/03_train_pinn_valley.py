@@ -53,7 +53,8 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
 # Model name is set from --model once arguments are parsed (see below).
-MODEL_NAMES = {"sa": "SA_PINN", "rba": "Dia_RBA_PINN", "mlp": "PhysicsFree_MLP", "sa_paper": "SA_PINN_paper", "rba_paper": "RBA_PINN_paper"}
+MODEL_NAMES = {"sa": "SA_PINN", "rba": "Dia_RBA_PINN", "mlp": "PhysicsFree_MLP", "sa_paper": "SA_PINN_paper", "rba_paper": "RBA_PINN_paper",
+               "ntk_paper": "NTK_weighted_PINN"}
 
 parser = argparse.ArgumentParser(
     description="Train one physics-informed network (SA, RBA, or physics-free).")
@@ -78,7 +79,7 @@ parser.add_argument("--device",      type=str, default="auto",
 parser.add_argument("--iso_dp_loss", action="store_true",
                     help="Add isotropic DP loss term (Bardeen-Shockley closed-form). "
                          "Ablation flag — off by default.")
-parser.add_argument("--model", type=str, default="rba", choices=["sa", "rba", "mlp", "sa_paper", "rba_paper"],
+parser.add_argument("--model", type=str, default="rba", choices=["sa", "rba", "mlp", "sa_paper", "rba_paper", "ntk_paper"],
                     help="Which weighting to use. rba = fixed residual rule; "
                          "sa = learned adversarial weights; mlp = no physics at all "
                          "(the physics-free control).")
@@ -193,6 +194,15 @@ parser.add_argument("--loss_pow", type=int, default=1, choices=[1, 2],
 parser.add_argument("--sa_paper_lr", type=float, default=5e-3, help="SA-PINN (McClenny & Braga-Neto 2023): ascent learning rate")
 parser.add_argument("--rba_paper_gamma", type=float, default=0.999, help="RBA-PINN (Anagnostopoulos et al. 2024): decay")
 parser.add_argument("--rba_paper_eta", type=float, default=0.01, help="RBA-PINN: learning rate eta* (upper bound eta*/(1-gamma) = 10)")
+parser.add_argument("--aphynity", action="store_true",
+                    help="APHYNITY (Yin et al. 2021, Algorithm 1): band edges = analytic models with trainable constants + network "
+                         "correction F_a; minimise mean |F_a|^2 over the training states + lambda * squared data loss, "
+                         "lambda <- lambda + tau2 * data loss after every step (implies --residual_phys; other terms off)")
+parser.add_argument("--aph_lambda0", type=float, default=1.0, help="APHYNITY: initial lambda")
+parser.add_argument("--aph_tau2", type=float, default=1.0, help="APHYNITY: lambda step tau2")
+parser.add_argument("--ntk_every", type=int, default=1000,
+                    help="NTK weighting (Wang, Yu & Perdikaris 2022, Algorithm 1): iterations between updates of the term weights "
+                         "lambda_k = Tr(K) / Tr(K_kk)")
 parser.add_argument("--nz_mode", type=str, default="volume", choices=["volume", "strain"],
                     help="states the zero-strain slope terms act on: |I1| < nz_thresh (volume, default: includes pure shear) "
                          "or max|eps_ij| < nz_thresh (strain: only small total strain)")
@@ -202,13 +212,6 @@ parser.add_argument("--phys_anneal", type=float, default=1.0,
 parser.add_argument("--slope_fix", action="store_true",
                     help="divide the summed diagonal partials by 3 so the zero-strain slope terms compare dE/dI1 with its target "
                          "(off reproduces all runs before 18 Oct 2026, which compared 3 dE/dI1 with the target)")
-parser.add_argument("--valley_head", action="store_true",
-                    help="structured head with six extra outputs: an offset for each conduction valley (zero at initialization)")
-parser.add_argument("--valley_sup", type=float, default=0.0,
-                    help="weight of a cross-entropy term that matches the model's lowest valley axis to the axis of the labeled CBM k-point; 0 = off")
-parser.add_argument("--focus", type=float, default=0.0,
-                    help="extra weight (1 + focus) on training states sheared in two or more planes whose two lowest valleys lie within --focus_margin; 0 = off")
-parser.add_argument("--focus_margin", type=float, default=0.3, help="valley margin in eV for --focus")
 parser.add_argument("--trust_scale", type=float, default=0.0,
                     help="V: weight the analytic-agreement terms per state by exp(-max|eps|/trust_scale); 0 = off")
 parser.add_argument("--colloc_n", type=int, default=0,
@@ -216,6 +219,13 @@ parser.add_argument("--colloc_n", type=int, default=0,
                          "[-colloc_max, colloc_max], fixed per seed) where the network must agree with the analytic models; 0 = off")
 parser.add_argument("--colloc_max", type=float, default=0.10, help="largest strain component of the collocation states")
 parser.add_argument("--w_colloc", type=float, default=1.0, help="weight of the collocation agreement term")
+parser.add_argument("--valley_head", action="store_true",
+                    help="structured head with six extra outputs: an offset for each conduction valley (zero at initialization)")
+parser.add_argument("--valley_sup", type=float, default=0.0,
+                    help="weight of a cross-entropy term that matches the model's lowest valley axis to the axis of the labeled CBM k-point; 0 = off")
+parser.add_argument("--focus", type=float, default=0.0,
+                    help="extra weight (1 + focus) on training states sheared in two or more planes whose two lowest valley axes lie within --focus_margin; 0 = off")
+parser.add_argument("--focus_margin", type=float, default=0.3, help="valley margin in eV for --focus")
 args = parser.parse_args()
 
 # The physics-free control is the same network with every physics term switched
@@ -224,6 +234,8 @@ if args.model == "mlp":
     for _t in ("cbm", "vbm", "cons", "anchor", "pcbm", "pvbm"):
         if _t not in args.drop_loss:
             args.drop_loss.append(_t)
+if args.aphynity:
+    args.residual_phys = True
 MODEL_NAME = MODEL_NAMES[args.model]
 if args.residual_phys:
     MODEL_NAME += "_residual"
@@ -511,8 +523,11 @@ def cbm_from_theta(strain, th, beta, offsets=None, valleys=False):
     c0, xd, xu, xup, xq, xc, xq2 = [th[:, i] for i in range(7)]
     def valley(e):
         return xd * I1 + xu * e + xq * e ** 2 + xc * I1 * e + xq2 * I1 ** 2
-    d = torch.stack([valley(Ezz) + 2 * xup * Exy, valley(Ezz) - 2 * xup * Exy, valley(Eyy) + 2 * xup * Ezx,
-                     valley(Eyy) - 2 * xup * Ezx, valley(Exx) + 2 * xup * Eyz, valley(Exx) - 2 * xup * Eyz], dim=1)
+    if _PHYS.DELTA_X <= 0:
+        d = torch.stack([valley(Ezz) + 2 * xup * Exy, valley(Ezz) - 2 * xup * Exy, valley(Eyy) + 2 * xup * Ezx,
+                         valley(Eyy) - 2 * xup * Ezx, valley(Exx) + 2 * xup * Eyz, valley(Exx) - 2 * xup * Eyz], dim=1)
+    else:
+        d = _PHYS._valleys(valley, Exx, Eyy, Ezz, Exy, Eyz, Ezx, xup, torch, lambda v: torch.stack(v, dim=1))
     if offsets is not None:
         d = d + offsets
     if valleys:
@@ -654,6 +669,13 @@ class PINNModel(nn.Module):
             self.register_buffer("in_scale", torch.tensor(scaler.scale_, dtype=torch.float32))
             with torch.no_grad():
                 self.out.bias.zero_()      # the analytic models supply the level
+            if args.aphynity:
+                # trainable analytic constants theta_p = theta0 + scale * u, u = 0 at the start (the calibrated values)
+                th0 = [float(getattr(_PHYS, k)) for k in THETA_KEYS]
+                sc = [max(abs(v), 1.0) * 0.25 for v in th0]; sc[-1] = 2.0
+                self.register_buffer("theta0", torch.tensor(th0, dtype=torch.float32))
+                self.register_buffer("theta_scale", torch.tensor(sc, dtype=torch.float32))
+                self.aph_u = nn.Parameter(torch.zeros(len(th0)))
 
         # Structured head: 13 outputs = changes to the analytic constants, zero at initialisation, so the
         # untrained model reproduces the analytic models exactly.
@@ -703,8 +725,14 @@ class PINNModel(nn.Module):
         vbm = o[:, 1]
         if self.residual_phys:
             raw = x * self.in_scale + self.in_mean
-            cbm = cbm + physics_cbm(raw)
-            vbm = vbm + physics_vbm(raw)
+            if args.aphynity:
+                self.last_fa = o[:, :2]
+                th = (self.theta0 + self.theta_scale * self.aph_u).expand(raw.shape[0], -1)
+                cbm = cbm + cbm_from_theta(raw, th, args.beta)
+                vbm = vbm + vbm_from_theta(raw, th)
+            else:
+                cbm = cbm + physics_cbm(raw)
+                vbm = vbm + physics_vbm(raw)
         eg  = cbm - vbm
         return cbm, vbm, eg
 
@@ -820,6 +848,7 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
                  eg_tr_t=None, X_iso_t=None, strain_iso_t=None, return_parts=False):
     # PRELUDE: predictions, analytic physics targets, and RBA per-sample weights.
     cbm_pred, vbm_pred, eg_pred = model(X_tr_t)
+    fa_tr = model.last_fa if args.aphynity else None
     if args.focus > 0:
         w = w * BRANCH["focus_w"]
 
@@ -944,6 +973,16 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
             E["data_c"] = (cbm_pred[dft_idx_t] - cbm_dft_t, None, W_DATA, False); E["data_v"] = (vbm_pred[dft_idx_t] - vbm_dft_t, None, W_DATA, False)
         if iso_mask.sum() > 0 and eg_tr_t is not None:
             E["iso"] = (eg_pred[iso_mask] - eg_tr_t[iso_mask], None, W_ISO_EG, False)
+        if args.model == "ntk_paper" and PAPER_UPDATE[0]:
+            if NTK_STEP[0] % args.ntk_every == 0:
+                # lambda_k = Tr(K) / Tr(K_kk), Tr(K_kk) = sum over the points of term k of |d e_i / d theta|^2 (eqs. 6.5-6.6)
+                _p = [p for p in model.parameters() if p.requires_grad]
+                tr = {k: _ntk_trace(v[0], _p) for k, v in E.items()}
+                tot = sum(tr.values())
+                for k in tr:
+                    NTK_W[k] = tot / tr[k] if tr[k] > 0 else 1.0
+                NTK_LOG.append(dict(epoch=NTK_STEP[0], **{"lambda_" + k: v for k, v in NTK_W.items()}, **{"trace_" + k: v for k, v in tr.items()}))
+            NTK_STEP[0] += 1
         L = {}
         for k, (e, t, wk, physics_term) in E.items():
             uses_w = (args.model == "rba_paper") or (args.model == "sa_paper" and physics_term)
@@ -964,7 +1003,7 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
                 term = e ** 2
             if t is not None:
                 term = term * t
-            L[k] = wk * term.mean()
+            L[k] = (NTK_W.get(k, 1.0) if args.model == "ntk_paper" else wk) * term.mean()
         z = torch.tensor(0.0, device=dev)
         L_cbm, L_vbm, L_cons = L.get("cbm", z), L.get("vbm", z), L.get("cons", z)
         L_anchor = L.get("anc_c", z) + L.get("anc_v", z)
@@ -975,6 +1014,23 @@ def compute_loss(model, X_tr_t, strain_tr_t, X_anc_t, X_nz_t,
         f = PHYS_MULT[0]
         L_cbm, L_vbm, L_cons, L_anchor, L_pcbm, L_pvbm = [f * t for t in (L_cbm, L_vbm, L_cons, L_anchor, L_pcbm, L_pvbm)]
     total = L_cbm + L_vbm + L_cons + L_anchor + L_pcbm + L_pvbm + L_data + L_iso_eg + L_iso
+    if args.aphynity:
+        # Algorithm 1: L = |F_a|^2 + lambda_j L_traj; lambda_{j+1} = lambda_j + tau2 L_traj(theta_{j+1}), applied at the next step
+        z = torch.tensor(0.0, device=X_tr_t.device)
+        L_traj = z
+        if dft_idx_t.numel() > 0:
+            L_traj = L_traj + ((cbm_pred[dft_idx_t] - cbm_dft_t) ** 2).mean() + ((vbm_pred[dft_idx_t] - vbm_dft_t) ** 2).mean()
+        if iso_mask.sum() > 0 and eg_tr_t is not None:
+            L_traj = L_traj + ((eg_pred[iso_mask] - eg_tr_t[iso_mask]) ** 2).mean()
+        if PAPER_UPDATE[0]:
+            if APH["step"] > 0:
+                APH["lam"] += args.aph_tau2 * float(L_traj.detach())
+            APH["step"] += 1
+        L_fa = (fa_tr ** 2).sum(dim=1).mean()
+        total = L_fa + APH["lam"] * L_traj
+        L_data, L_cbm = L_traj, L_fa
+        if APH["step"] % 1000 == 1 and PAPER_UPDATE[0]:
+            APH["log"].append(dict(epoch=APH["step"], lam=APH["lam"], L_fa=float(L_fa.detach()), L_traj=float(L_traj.detach())))
     extra = {}
     if args.sym_colloc > 0:
         # S: a random cubic operation per training state; the rotated strain must give the same band edges
@@ -1047,7 +1103,21 @@ def _to(arr, device):
 
 
 PHYS_MULT = [1.0]   # current physics-term multiplier under --phys_anneal
-PAPER_MODE = (args.model in ("sa_paper", "rba_paper")) or (args.loss_pow == 2)
+PAPER_MODE = (args.model in ("sa_paper", "rba_paper", "ntk_paper")) or (args.loss_pow == 2)
+APH = dict(lam=args.aph_lambda0, step=0, log=[])   # aphynity: lambda, step counter, history
+NTK_W, NTK_STEP, NTK_LOG = {}, [0], []   # ntk_paper: term weights (1 until the first update), update counter, history
+
+
+def _ntk_trace(e, params, chunk=128):
+    # Sum over the points of |d e_i / d theta|^2, i.e. the trace of this term's block of the neural tangent kernel.
+    n, tot = e.shape[0], 0.0
+    for s in range(0, n, chunk):
+        m = min(chunk, n - s)
+        go = torch.zeros(m, n, device=e.device, dtype=e.dtype)
+        go[torch.arange(m), torch.arange(s, s + m)] = 1.0
+        gs = torch.autograd.grad(e, params, grad_outputs=go, retain_graph=True, is_grads_batched=True, allow_unused=True)
+        tot += sum(float((g.double() ** 2).sum()) for g in gs if g is not None)
+    return tot
 PAPER_W = {}        # per-term, per-point weights of sa_paper / rba_paper (created at the first loss evaluation)
 PAPER_UPDATE = [False]   # rba_paper: update the multipliers only in the network-update call
 BRANCH = {}     # tensors for the physics-branch switches (filled in train() only when a switch is on)
@@ -1091,21 +1161,20 @@ def train(data, device):
         cbm_dft_t = torch.zeros(0, device=device)
         vbm_dft_t = torch.zeros(0, device=device)
 
+    # Full training-set Eg labels — used by L_iso_eg on isotropic samples
+    eg_tr_t = _to(data["eg_tr"], device)
     if args.valley_sup > 0:
         BRANCH["axis_dft"] = torch.tensor(data["axis_tr"][data["dft_idx"]], dtype=torch.long, device=device) if len(data["dft_idx"]) > 0 else torch.zeros(0, dtype=torch.long, device=device)
     if args.focus > 0:
         st = torch.tensor(data["strain_tr"], dtype=torch.float64); I1f = st[:, :3].sum(1)
         P_ = _PHYS
         vf = lambda e: P_.XI_D * I1f + P_.XI_U * e + P_.XI_Q * e ** 2 + P_.XI_C * I1f * e + P_.XI_Q2 * I1f ** 2
-        dv = torch.stack([vf(st[:, 2]) + 2 * P_.XI_UP * st[:, 3], vf(st[:, 2]) - 2 * P_.XI_UP * st[:, 3], vf(st[:, 1]) + 2 * P_.XI_UP * st[:, 5],
-                          vf(st[:, 1]) - 2 * P_.XI_UP * st[:, 5], vf(st[:, 0]) + 2 * P_.XI_UP * st[:, 4], vf(st[:, 0]) - 2 * P_.XI_UP * st[:, 4]], 1)
-        srt = dv.sort(1).values; margin = srt[:, 1] - srt[:, 0]
+        dv = P_._valleys(vf, st[:, 0], st[:, 1], st[:, 2], st[:, 3], st[:, 4], st[:, 5], P_.XI_UP, torch, lambda v: torch.stack(v, 1))
+        ax3 = torch.stack([dv[:, 2 * a:2 * a + 2].min(1).values for a in range(3)], 1)   # lowest valley on each axis
+        srt = ax3.sort(1).values; margin = srt[:, 1] - srt[:, 0]
         region = ((st[:, 3:].abs() > 1e-8).sum(1) >= 2) & (margin < args.focus_margin)
         BRANCH["focus_w"] = _to((1.0 + args.focus * region.double()).numpy(), device)
         print("  focus: %d of %d training states in the competing-valley region, weight %.1f" % (int(region.sum()), len(region), 1 + args.focus), flush=True)
-
-    # Full training-set Eg labels — used by L_iso_eg on isotropic samples
-    eg_tr_t = _to(data["eg_tr"], device)
 
     # Isotropic DP loss tensors — built once, reused every epoch
     if args.iso_dp_loss:
@@ -1342,8 +1411,8 @@ def train(data, device):
                 eg_tr_t=eg_tr_t, X_iso_t=X_iso_t, strain_iso_t=strain_iso_t)
             (-loss_sa).backward()
             sa_paper_opt[0].step()
-        elif args.model == "rba_paper":
-            pass                           # multipliers already updated inside the network-update call
+        elif args.model in ("rba_paper", "ntk_paper"):
+            pass                           # weights already updated inside the network-update call
         elif (not args.no_rba) and (ep % 100 == 0):
             update_rba(rba_w, model, X_tr_t, eg_phys_tr)
 
@@ -1418,6 +1487,10 @@ def train(data, device):
     )
     if probe_rows:
         pd.DataFrame(probe_rows).to_csv(os.path.join(args.results_dir, "grad_probe.csv"), index=False)
+    if APH["log"]:
+        pd.DataFrame(APH["log"]).to_csv(os.path.join(args.results_dir, "aphynity_lambda.csv"), index=False)
+    if NTK_LOG:
+        pd.DataFrame(NTK_LOG).to_csv(os.path.join(args.results_dir, "ntk_weights.csv"), index=False)
 
     # Dump final-epoch RBA sample weights with their strain type, so the
     # weight-by-mode diagnostic (which modes the attention scheme up-weights)

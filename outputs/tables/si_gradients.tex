@@ -1,9 +1,12 @@
 \begin{tabular}{lrrrrrrrr}
 \toprule
-\textbf{Model} & \textbf{1\%: ratio} & \textbf{cosine} & \textbf{5\%: ratio} & \textbf{cosine} & \textbf{25\%: ratio} & \textbf{cosine} & \textbf{100\%: ratio} & \textbf{cosine} \\
+ & \multicolumn{2}{c}{\textbf{1\% labeled}} & \multicolumn{2}{c}{\textbf{5\% labeled}} & \multicolumn{2}{c}{\textbf{25\% labeled}} & \multicolumn{2}{c}{\textbf{100\% labeled}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+\textbf{Model} & \textbf{Ratio} & \textbf{Cosine} & \textbf{Ratio} & \textbf{Cosine} & \textbf{Ratio} & \textbf{Cosine} & \textbf{Ratio} & \textbf{Cosine} \\
 \midrule
-SA-PINN & 212 & $-0.12$ & 289 & $+0.08$ & 227 & $+0.06$ & 928 & $-0.10$ \\
-RBA-PINN & 2.0 & $-0.09$ & 1.9 & $-0.23$ & 4.7 & $-0.18$ & 1.1 & $-0.71$ \\
-Our model & 0.11 & $+0.24$ & 0.05 & $+0.00$ & 0.04 & $+0.02$ & 0.04 & $-0.26$ \\
+PHM & 0.22 & $-0.25$ & $<$0.01 & $+0.01$ & $<$0.01 & $-0.07$ & $<$0.01 & $+0.17$ \\
+Residual model & 0.27 & $-0.05$ & $<$0.01 & $-0.16$ & $<$0.01 & $-0.11$ & $<$0.01 & $+0.28$ \\
+SA-PINN & 291 & $-0.15$ & 422 & $-0.01$ & 528 & $+0.17$ & 916 & $+0.17$ \\
+RBA-PINN & 2.1 & $-0.23$ & 2.1 & $-0.26$ & 2.2 & $-0.29$ & 2.1 & $-0.46$ \\
 \bottomrule
 \end{tabular}

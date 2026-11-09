@@ -1,22 +1,18 @@
 \begin{tabular}{lrrrrrr}
 \toprule
-\textbf{Model} & \begin{tabular}[b]{@{}c@{}}\textbf{Labeled}\\\textbf{(\%)}\end{tabular} & \begin{tabular}[b]{@{}c@{}}\textbf{Label-matched}\\\textbf{constants}\end{tabular} & \begin{tabular}[b]{@{}c@{}}\textbf{Training-portion}\\\textbf{constants}\end{tabular} & \textbf{Change} & \textbf{$P$} & \textbf{MLP} \\
+\textbf{Model} & \begin{tabular}[b]{@{}c@{}}\textbf{Labeled}\\\textbf{(\%)}\end{tabular} & \begin{tabular}[b]{@{}c@{}}\textbf{Label-matched}\\\textbf{constants}\end{tabular} & \begin{tabular}[b]{@{}c@{}}\textbf{Training-portion}\\\textbf{constants}\end{tabular} & \textbf{Difference} & \textbf{$P$} & \begin{tabular}[b]{@{}c@{}}\textbf{MLP, same}\\\textbf{fraction}\end{tabular} \\
 \midrule
-Our model & 1 & 446.4 & 44.4 & $+402.0$ & 0.29 & 627.6 \\
-Our model & 2 & 56.8 & 39.7 & $+17.1$ & 0.0027 & 507.7 \\
-Our model & 5 & 36.5 & 30.4 & $+6.0$ & $<$0.001 & 274.3 \\
-Our model & 10 & 22.5 & 21.0 & $+1.5$ & 0.041 & 144.5 \\
-$\Delta$-learning & 1 & 459.3 & 67.3 & $+392.0$ & 0.53 & 627.6 \\
-$\Delta$-learning & 2 & 67.7 & 61.3 & $+6.4$ & 0.09 & 507.7 \\
-$\Delta$-learning & 5 & 55.6 & 48.6 & $+7.0$ & $<$0.001 & 274.3 \\
-$\Delta$-learning & 10 & 40.8 & 39.8 & $+1.0$ & 0.53 & 144.5 \\
-Our model without the agreement term & 1 & 110.6 & 54.5 & $+56.2$ & 0.56 & 627.6 \\
-Our model without the agreement term & 2 & 51.9 & 45.3 & $+6.6$ & 0.14 & 507.7 \\
-Our model without the agreement term & 5 & 31.5 & 30.0 & $+1.5$ & 0.64 & 274.3 \\
-Our model without the agreement term & 10 & 20.2 & 19.5 & $+0.7$ & 0.64 & 144.5 \\
-Analytic models alone & 1 & 458.2 (median 77.8) & 51.3 & -- & -- & -- \\
-Analytic models alone & 2 & 64.8 (median 60.0) & 51.3 & -- & -- & -- \\
-Analytic models alone & 5 & 58.6 (median 57.2) & 51.3 & -- & -- & -- \\
-Analytic models alone & 10 & 52.6 (median 50.6) & 51.3 & -- & -- & -- \\
+PHM & 1 & 520.7 & 31.1 & $+489.5$ & 0.62 & 627.6 \\
+PHM & 2 & 39.6 & 27.4 & $+12.3$ & 0.16 & 507.7 \\
+PHM & 5 & 20.3 & 18.1 & $+2.2$ & 0.093 & 274.3 \\
+PHM & 10 & 15.5 & 15.1 & $+0.4$ & 0.62 & 144.5 \\
+Residual model & 1 & 526.9 & 35.4 & $+491.5$ & 0.31 & 627.6 \\
+Residual model & 2 & 49.8 & 30.6 & $+19.2$ & 0.008 & 507.7 \\
+Residual model & 5 & 24.7 & 17.8 & $+6.9$ & $<$0.001 & 274.3 \\
+Residual model & 10 & 15.4 & 12.7 & $+2.6$ & 0.008 & 144.5 \\
+Analytic models alone & 1 & 533.8 (median 68.8) & 36.9 & -- & -- & -- \\
+Analytic models alone & 2 & 58.2 (median 43.2) & 36.9 & -- & -- & -- \\
+Analytic models alone & 5 & 46.5 (median 43.6) & 36.9 & -- & -- & -- \\
+Analytic models alone & 10 & 42.0 (median 39.4) & 36.9 & -- & -- & -- \\
 \bottomrule
 \end{tabular}

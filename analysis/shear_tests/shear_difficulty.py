@@ -17,7 +17,7 @@ def per_state(model):
         t = pd.read_csv(f)
         for i, e in zip(t.sample_id.values, (t.Eg_pred_eV - t.Eg_true_eV).abs().values * 1000): err.setdefault(int(i), []).append(e)
     return pd.Series({i: np.mean(v) for i, v in err.items()})
-D["err_ours"] = per_state("hyb_sdp_gap_ld9"); D["err_mlp"] = per_state("mlp")
+D["err_ours"] = per_state("phm"); D["err_mlp"] = per_state("mlp")
 
 # features from the labels and strains alone (no model)
 tree = cKDTree(X); dist, idx = tree.query(X, k=16)

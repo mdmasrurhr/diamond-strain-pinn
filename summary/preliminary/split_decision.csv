@@ -1,8 +1,8 @@
 scheme,test_mae_meV_mean,test_mae_meV_std,n_seeds,measures
-random,15.26,1.033295698239376,3,"interpolation, no stratification"
+random,15.26,1.0332956982393759,3,"interpolation, no stratification"
 kfold,15.754,1.8001857047062044,15,"interpolation, all data used"
-stratified,17.483333333333334,2.565274514225199,3,"interpolation, all families seen"
-group_biaxial,25.8,2.561464424894478,3,extrapolation to an unseen family (biaxial)
-magnitude_05,217.78333333333333,56.92102013609147,3,extrapolation beyond |strain| = 0.05
-group_triaxial,386.26666666666665,36.733015576363094,3,extrapolation to an unseen family (triaxial)
-group_shear,3.945650335689387e+17,6.597634190094758e+16,3,extrapolation to an unseen family (shear)
+stratified,17.483333333333334,2.5652745142251989,3,"interpolation, all families seen"
+group_biaxial,25.800000000000001,2.5614644248944778,3,extrapolation to an unseen family (biaxial)
+magnitude_05,217.78333333333333,56.921020136091471,3,extrapolation beyond |strain| = 0.05
+group_triaxial,386.26666666666665,36.733015576363087,3,extrapolation to an unseen family (triaxial)
+group_shear,3.9456503356893869e+17,65976341900947584,3,extrapolation to an unseen family (shear)

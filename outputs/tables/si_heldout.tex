@@ -1,15 +1,16 @@
 \begin{tabular}{lrrrrrrrr}
 \toprule
-\textbf{Model} & \textbf{Isotropic} & \textbf{Uniaxial} & \textbf{Biaxial} & \textbf{Triaxial} & \textbf{Shear} & \textbf{$>0.03$} & \textbf{$>0.05$} & \textbf{$>0.07$} \\
+ & \multicolumn{5}{c}{\textbf{Family left out}} & \multicolumn{3}{c}{\textbf{Strain beyond $|\varepsilon|$}} \\
+\cmidrule(lr){2-6}\cmidrule(l){7-9}
+\textbf{Model} & \textbf{Isotropic} & \textbf{Uniaxial} & \textbf{Biaxial} & \textbf{Triaxial} & \textbf{Shear} & \textbf{0.03} & \textbf{0.05} & \textbf{0.07} \\
 \midrule
-Analytic models alone & 82 $\pm$ 3 & 49 $\pm$ 0 & 44 $\pm$ 1 & 61 $\pm$ 6 & 940 $\pm$ 1 & 291 $\pm$ 61 & 100 $\pm$ 8 & 49 $\pm$ 1 \\
-Our model & 2 $\pm$ 0 & 14 $\pm$ 3 & 4 $\pm$ 1 & 54 $\pm$ 10 & 946 $\pm$ 1 & 273 $\pm$ 63 & 106 $\pm$ 27 & 33 $\pm$ 5 \\
-SA-PINN & 25 $\pm$ 5 & 45 $\pm$ 5 & 45 $\pm$ 7 & 262 $\pm$ 88 & 828 $\pm$ 58 & 556 $\pm$ 194 & 234 $\pm$ 42 & 93 $\pm$ 15 \\
-RBA-PINN & 10 $\pm$ 3 & 36 $\pm$ 10 & 53 $\pm$ 25 & 453 $\pm$ 171 & 817 $\pm$ 63 & 664 $\pm$ 157 & 396 $\pm$ 187 & 114 $\pm$ 47 \\
-$\Delta$-learning & 4 $\pm$ 1 & 4 $\pm$ 1 & 2 $\pm$ 0 & 70 $\pm$ 16 & 935 $\pm$ 2 & 275 $\pm$ 59 & 131 $\pm$ 54 & 24 $\pm$ 9 \\
-$\Delta$-learning, zero-strain terms & 4 $\pm$ 2 & 10 $\pm$ 3 & 3 $\pm$ 1 & 72 $\pm$ 13 & 934 $\pm$ 3 & 275 $\pm$ 62 & 110 $\pm$ 44 & 30 $\pm$ 8 \\
-$\Delta$-learning, zero-strain and symmetry terms & 5 $\pm$ 2 & 10 $\pm$ 2 & 3 $\pm$ 0 & 71 $\pm$ 11 & 934 $\pm$ 3 & 286 $\pm$ 63 & 133 $\pm$ 45 & 28 $\pm$ 4 \\
-Our model without the agreement term & 2 $\pm$ 0 & 13 $\pm$ 4 & 3 $\pm$ 1 & 52 $\pm$ 10 & 946 $\pm$ 1 & 270 $\pm$ 60 & 112 $\pm$ 25 & 31 $\pm$ 4 \\
+Analytic models alone & 29 $\pm$ 1 & 30 $\pm$ 1 & 16 $\pm$ 1 & 86 $\pm$ 2 & 940 $\pm$ 1 & 60 $\pm$ 3 & 44 $\pm$ 5 & 40 $\pm$ 2 \\
+PHM & 3 $\pm$ 1 & 2 $\pm$ 0 & 1 $\pm$ 0 & 102 $\pm$ 18 & 944 $\pm$ 1 & 98 $\pm$ 28 & 49 $\pm$ 19 & 11 $\pm$ 3 \\
+Residual model & 3 $\pm$ 1 & 5 $\pm$ 2 & 2 $\pm$ 0 & 102 $\pm$ 8 & 936 $\pm$ 2 & 72 $\pm$ 5 & 45 $\pm$ 8 & 23 $\pm$ 4 \\
+SA-PINN & 36 $\pm$ 7 & 44 $\pm$ 4 & 31 $\pm$ 4 & 272 $\pm$ 59 & 827 $\pm$ 57 & 616 $\pm$ 150 & 219 $\pm$ 64 & 91 $\pm$ 14 \\
+RBA-PINN & 20 $\pm$ 5 & 37 $\pm$ 11 & 46 $\pm$ 24 & 471 $\pm$ 163 & 819 $\pm$ 53 & 1214 $\pm$ 1466 & 429 $\pm$ 131 & 116 $\pm$ 51 \\
+NTK-PINN & 19 $\pm$ 18 & 40 $\pm$ 6 & 34 $\pm$ 4 & 304 $\pm$ 84 & 921 $\pm$ 65 & 537 $\pm$ 215 & 296 $\pm$ 142 & 105 $\pm$ 53 \\
+APHYNITY & 5 $\pm$ 4 & 8 $\pm$ 3 & 4 $\pm$ 1 & 128 $\pm$ 19 & 934 $\pm$ 14 & 104 $\pm$ 52 & 55 $\pm$ 15 & 16 $\pm$ 4 \\
 MLP & 6 $\pm$ 3 & 12 $\pm$ 5 & 11 $\pm$ 5 & 575 $\pm$ 97 & 848 $\pm$ 53 & 893 $\pm$ 211 & 536 $\pm$ 146 & 84 $\pm$ 47 \\
 \bottomrule
 \end{tabular}
