@@ -1,28 +1,36 @@
-\begin{tabular}{p{6.2cm}rrrrrr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{6.2cm}rrrrrr}
 \toprule
 \textbf{Comparison} & \textbf{$t(16)$} & \textbf{$P$} & \textbf{$d$} & \textbf{95\% CI} & \textbf{Wilcoxon $P$} & \textbf{Shapiro--Wilk $P$} \\
 \midrule
-MAE, MLP vs our model, 100\% labeled & 3.97 & 0.0011 & 0.96 & $1.7$ to $5.5$~meV & 0.0013 & 0.57 \\
-MAE, SA-PINN vs our model, 100\% labeled & 23.42 & $<$0.001 & 5.68 & $41.4$ to $49.6$~meV & $<$0.001 & 0.21 \\
-MAE, RBA-PINN vs our model, 100\% labeled & 21.68 & $<$0.001 & 5.26 & $23.5$ to $28.6$~meV & $<$0.001 & 0.22 \\
-95th-percentile error, MLP vs our model, 100\% labeled & 6.77 & $<$0.001 & 1.64 & $19.8$ to $37.9$~meV & $<$0.001 & 0.39 \\
-Maximum error, MLP vs our model, 100\% labeled & 1.10 & 0.29 & 0.27 & $-33.4$ to $105.4$~meV & 0.38 & 0.46 \\
-Shear-family MAE, MLP vs our model, 100\% labeled & 4.35 & 0.002 & 1.06 & $5.1$ to $14.8$~meV & 0.0032 & 0.48 \\
-Shear-sign drift, SA-PINN vs our model, 5\% labeled & 2.66 & 0.017 & 0.65 & $0.4$ to $3.7$~meV & 0.027 & 0.14 \\
-MAE, MLP vs our model, 5\% labeled & 21.79 & $<$0.001 & 5.28 & $220.1$ to $267.6$~meV & $<$0.001 & 0.995 \\
-Sign accuracy, our model vs MLP, 5\% labeled & 7.76 & $<$0.001 & 1.88 & $2.6$ to $4.5$ & $<$0.001 & 0.23 \\
-MAE, analytic models vs our model, 0\% labeled & 9.33 & $<$0.001 & 2.26 & $3.6$ to $5.8$~meV & $<$0.001 & 0.15 \\
-MAE, our model without vs with the isotropic term, 0\% labeled & 8.17 & $<$0.001 & 1.98 & $2.9$ to $4.9$~meV & $<$0.001 & 0.5 \\
-MAE, SA-PINN vs MLP, 25\% labeled & 2.86 & 0.011 & 0.69 & $1.1$ to $7.7$~meV & 0.013 & 0.81 \\
-MAE, RBA-PINN vs MLP, 50\% labeled & 12.54 & $<$0.001 & 3.04 & $14.5$ to $20.4$~meV & $<$0.001 & 0.35 \\
-MAE, our model without vs with the agreement term, 1\% labeled & 4.84 & $<$0.001 & 1.17 & $5.7$ to $14.5$~meV & $<$0.001 & 0.05 \\
-Axis-relabelling drift, our model with vs without the agreement term, 5\% labeled & 4.47 & 0.0023 & 1.08 & $2.1$ to $5.8$~meV & 0.0042 & 0.58 \\
-Shear-sign drift, our model with vs without the agreement term, 5\% labeled & 5.26 & $<$0.001 & 1.27 & $1.7$ to $4.0$~meV & $<$0.001 & 0.71 \\
-MAE, our model without vs with the symmetry term, 5\% labeled & 8.52 & $<$0.001 & 2.07 & $4.4$ to $7.3$~meV & $<$0.001 & 0.25 \\
-Axis-relabelling drift, our model without vs with the symmetry term, 100\% labeled & 5.00 & $<$0.001 & 1.21 & $2.0$ to $4.9$~meV & $<$0.001 & 0.32 \\
-Deformation-potential error, our model without vs with the isotropic term, 0\% labeled & 49.60 & $<$0.001 & 12.03 & $0.50$ to $0.54$~eV & $<$0.001 & 0.54 \\
-MAE, our model with label-matched vs training-portion constants, 2\% labeled & 4.06 & 0.0027 & 0.99 & $8.2$ to $26.0$~meV & $<$0.001 & 0.049 \\
-MAE, our model with label-matched vs training-portion constants, 5\% labeled & 5.45 & $<$0.001 & 1.32 & $3.7$ to $8.4$~meV & $<$0.001 & 0.18 \\
-MAE, our model with label-matched vs training-portion constants, 10\% labeled & 2.57 & 0.041 & 0.62 & $0.3$ to $2.7$~meV & 0.023 & 0.98 \\
+MAE, analytic models with the linear vs the two-band shear term & 12.96 & $<$0.001 & 3.14 & $12.1$ to $16.8$~meV & $<$0.001 & 0.2 \\
+MAE of the MLP with all training states labeled minus that of the PHM with half labeled & 4.60 & $<$0.001 & 1.12 & $2.7$ to $7.2$~meV & $<$0.001 & 0.11 \\
+MAE, MLP vs the PHM, 100\% labeled & 6.01 & $<$0.001 & 1.46 & $3.7$ to $7.8$~meV & $<$0.001 & 0.23 \\
+MAE, SA-PINN vs the PHM, 100\% labeled & 37.52 & $<$0.001 & 9.10 & $36.1$ to $40.4$~meV & $<$0.001 & 0.25 \\
+MAE, RBA-PINN vs the PHM, 100\% labeled & 26.31 & $<$0.001 & 6.38 & $22.0$ to $25.8$~meV & $<$0.001 & 0.52 \\
+95th-percentile error, MLP vs the PHM, 100\% labeled & 4.75 & $<$0.001 & 1.15 & $18.0$ to $46.9$~meV & 0.0032 & $<$0.001 \\
+Maximum error, MLP vs the PHM, 100\% labeled & 1.64 & 0.12 & 0.40 & $-13.6$ to $107.4$~meV & 0.12 & 0.31 \\
+Shear-family MAE, MLP vs the PHM, 100\% labeled & 5.27 & $<$0.001 & 1.28 & $7.6$ to $17.9$~meV & 0.0015 & 0.065 \\
+Shear-sign drift, SA-PINN vs the PHM, 5\% labeled & 5.16 & $<$0.001 & 1.25 & $0.8$ to $2.0$~meV & $<$0.001 & 0.41 \\
+MAE, residual model vs the PHM, 0\% labeled & 3.89 & 0.0091 & 0.94 & $1.0$ to $3.5$~meV & 0.012 & 0.95 \\
+MAE, residual model vs the PHM, 1\% labeled & 5.29 & $<$0.001 & 1.28 & $2.5$ to $5.9$~meV & $<$0.001 & 0.89 \\
+MAE, residual model vs the PHM, 10\% labeled & 4.77 & 0.0017 & 1.16 & $1.3$ to $3.3$~meV & 0.0052 & 0.19 \\
+MAE, residual model vs the PHM, 2\% labeled & 3.33 & 0.026 & 0.81 & $1.2$ to $5.3$~meV & 0.056 & 0.14 \\
+Axis-relabelling drift, residual model vs the PHM, 5\% labeled & 5.76 & $<$0.001 & 1.40 & $0.9$ to $2.0$~meV & $<$0.001 & 0.24 \\
+MAE, MLP vs the PHM, 5\% labeled & 23.06 & $<$0.001 & 5.59 & $232.6$ to $279.7$~meV & $<$0.001 & 0.995 \\
+Sign accuracy, the PHM vs MLP, 5\% labeled & 9.02 & $<$0.001 & 2.19 & $2.9$ to $4.8$ & $<$0.001 & 0.62 \\
+MAE, analytic models vs the PHM, 0\% labeled & 0.63 & 0.53 & 0.15 & $-1.0$ to $1.9$~meV & 0.58 & 0.72 \\
+MAE, SA-PINN vs MLP, 50\% labeled & 17.17 & $<$0.001 & 4.16 & $19.0$ to $24.4$~meV & $<$0.001 & 0.98 \\
+MAE, RBA-PINN vs MLP, 50\% labeled & 12.36 & $<$0.001 & 3.00 & $11.2$ to $15.9$~meV & $<$0.001 & 0.997 \\
+MAE, NTK-PINN vs MLP, 50\% labeled & 12.84 & $<$0.001 & 3.11 & $10.7$ to $14.9$~meV & $<$0.001 & 0.83 \\
+MAE, the PHM without vs with the agreement term, 1\% labeled & 3.51 & 0.023 & 0.85 & $3.2$ to $13.1$~meV & 0.0085 & 0.13 \\
+MAE, the PHM without vs with the isotropic term, 0\% labeled & 6.35 & $<$0.001 & 1.54 & $3.0$ to $6.1$~meV & $<$0.001 & 0.087 \\
+Deformation-potential error, the PHM without vs with the isotropic term, 0\% labeled & 40.64 & $<$0.001 & 9.86 & $0.44$ to $0.49$~eV & $<$0.001 & 0.75 \\
+MAE, the PHM without vs with the copied symmetry labels, 5\% labeled & 13.82 & $<$0.001 & 3.35 & $13.9$ to $18.9$~meV & $<$0.001 & 0.2 \\
+Axis-relabelling drift, the PHM without vs with the copied symmetry labels, 5\% labeled & 13.14 & $<$0.001 & 3.19 & $13.8$ to $19.2$~meV & $<$0.001 & 0.6 \\
+MAE, the PHM with vs without the symmetry term, 100\% labeled & 3.26 & 0.044 & 0.79 & $0.5$ to $2.3$~meV & 0.05 & 0.97 \\
+Axis-relabelling drift, the PHM with vs without the symmetry term, 5\% labeled & 7.52 & $<$0.001 & 1.82 & $1.3$ to $2.3$~meV & $<$0.001 & 0.044 \\
+MAE, the PHM with label-matched vs training-portion constants, 2\% labeled & 2.07 & 0.16 & 0.50 & $-0.3$ to $24.8$~meV & 0.09 & 0.0022 \\
+MAE, the PHM with label-matched vs training-portion constants, 5\% labeled & 2.51 & 0.093 & 0.61 & $0.3$ to $4.0$~meV & 0.07 & 0.98 \\
+MAE, the PHM with label-matched vs training-portion constants, 10\% labeled & 0.60 & 0.62 & 0.15 & $-1.1$ to $2.0$~meV & 0.89 & 0.011 \\
 \bottomrule
 \end{tabular}

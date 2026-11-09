@@ -1,5 +1,7 @@
-% Figure 1 of the paper: data, our model and where the physics enters. Compile standalone (TeX Live with tgheros, sfmath and TikZ):
-%   pdflatex -output-directory outputs/figures analysis/fig1_workflow.tex
+% Figure 1 of the manuscript: one strained diamond crystal feeds four kinds of model, which differ in where the
+% textbook theory sits; every predicted bandgap is compared with quantum simulation (DFT) of the same crystal.
+% Okabe-Ito colours, drawn at final size (lettering 9-10 pt). Compile standalone:
+%   pdflatex -output-directory figures/v3 figures/src_fig1_workflow_v3.tex   (then rename to fig1_workflow.pdf)
 \documentclass[11pt,border=2pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{tgheros}
@@ -7,143 +9,102 @@
 \usepackage{amsmath}
 \usepackage{sfmath}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, calc, backgrounds, fit}
-% ---------------------------------------------------------------- palette (colour-blind safe)
-\definecolor{net}{HTML}{0072B2}     % network
-\definecolor{phys}{HTML}{D55E00}    % analytic models / physics
-\definecolor{dat}{HTML}{4D4D4D}     % data
-\definecolor{atom}{HTML}{3A3A3A}
-\definecolor{soft}{HTML}{F2F2F2}
+\usetikzlibrary{arrows.meta, calc, backgrounds}
+% ---------------------------------------------------------------- Okabe-Ito palette (colour-blind safe), same colours as Figs 2-5
+\definecolor{phm}{HTML}{009E73}
+\definecolor{pinn}{HTML}{0072B2}
+\definecolor{delta}{HTML}{CC79A7}
+\definecolor{mlp}{HTML}{D55E00}
+\definecolor{ink}{HTML}{1E2A33}
+\colorlet{theory}{ink}
+\definecolor{sky}{HTML}{56B4E9}
 \tikzset{
-  >={Stealth[length=4pt,width=3.2pt]},
-  ar/.style={->, line width=0.7pt, black!70},
-  lbl/.style={font=\small, align=center, text=black!85},
-  small/.style={font=\footnotesize, align=center, text=black!75},
-  pl/.style={font=\large\bfseries, anchor=north west},
-  neuron/.style={circle, draw=net, fill=net!12, line width=0.5pt, minimum size=5pt, inner sep=0pt},
-  edge/.style={net!45, line width=0.25pt},
-  physbox/.style={rounded corners=2pt, draw=phys, fill=phys!8, line width=0.7pt, inner sep=4pt, align=left},
-  panel/.style={rounded corners=3pt, draw=black!18, line width=0.5pt},
+  >={Stealth[length=6pt,width=5pt]},
+  mname/.style={font=\small\bfseries, anchor=south},
+  note/.style={font=\footnotesize, text=ink, anchor=south},
+  frame/.style={draw=ink!45, line width=0.6pt, minimum width=2.3cm, minimum height=1.45cm},
+  dashln/.style={ink!75, line width=0.9pt, dash pattern=on 3pt off 2pt},
 }
+% neural network: centre #1, colour #2, scale #3
+\newcommand{\net}[3]{%
+  \begin{scope}[shift={#1}, scale=#3]
+    \foreach \a in {-0.25,0,0.25}{\foreach \b in {-0.36,-0.12,0.12,0.36}{\draw[#2!60, line width=0.45pt] (-0.45,\a) -- (0,\b);}}
+    \foreach \a in {-0.36,-0.12,0.12,0.36}{\foreach \b in {-0.25,0,0.25}{\draw[#2!60, line width=0.45pt] (0,\a) -- (0.45,\b);}}
+    \foreach \y in {-0.25,0,0.25}{\fill[white] (-0.45,\y) circle (0.085); \draw[#2, line width=0.9pt] (-0.45,\y) circle (0.085);
+                                   \fill[white] (0.45,\y) circle (0.085); \draw[#2, line width=0.9pt] (0.45,\y) circle (0.085);}
+    \foreach \y in {-0.36,-0.12,0.12,0.36}{\fill[#2] (0,\y) circle (0.085);}
+  \end{scope}}
+% textbook theory (a closed book): centre #1, scale #2
+\newcommand{\book}[2]{%
+  \begin{scope}[shift={#1}, scale=#2]
+    \fill[theory!10, rounded corners=1.5pt] (-0.36,-0.46) rectangle (0.36,0.46);
+    \draw[theory, line width=1pt, rounded corners=1.5pt] (-0.36,-0.46) rectangle (0.36,0.46);
+    \fill[theory] (-0.36,-0.46) rectangle (-0.24,0.46);
+    \foreach \y in {0.26,0.12,-0.02}{\draw[theory, line width=0.9pt, line cap=round] (-0.12,\y) -- (0.24,\y);}
+  \end{scope}}
+% predicted bandgap (two band edges and the gap): centre #1, tile colour #2
+\newcommand{\tile}[2]{%
+  \begin{scope}[shift={#1}]
+    \fill[#2, rounded corners=3pt] (-0.62,-0.62) rectangle (0.62,0.62);
+    \fill[white, rounded corners=1pt] (-0.4,0.2) rectangle (0.4,0.36);
+    \fill[white, rounded corners=1pt] (-0.4,-0.36) rectangle (0.4,-0.2);
+    \draw[<->, white, line width=1.1pt, >={Stealth[length=3.5pt,width=4pt]}] (0,-0.17) -- (0,0.17);
+  \end{scope}}
 \begin{document}
-\begin{tikzpicture}[font=\small]
+\begin{tikzpicture}
 
-% =========================================================================================== a: reference data
-\node[pl] at (-0.35, 4.25) {a};
-\newcommand{\cell}[2]{% #1 shift, #2 extra transform: two-atom primitive cell of diamond
-  \begin{scope}[shift={#1}, scale=0.62, #2]
-    \coordinate (O) at (0,0); \coordinate (A) at (1.3,0.18); \coordinate (B) at (0.48,1.0); \coordinate (C) at (0.62,-0.62);
-    \draw[black!50, line width=0.5pt] (O)--(A)--($(A)+(B)$)--(B)--cycle (O)--(C)--($(C)+(A)$)--(A) ($(C)+(A)$)--($(A)+(B)+(C)$)--($(A)+(B)$);
-    \draw[black!25, line width=0.4pt, densely dashed] (C)--($(C)+(B)$)--(B) ($(C)+(B)$)--($(A)+(B)+(C)$);
-    \coordinate (X1) at ($0.25*(A)+0.25*(B)+0.25*(C)$);
-    \draw[atom, line width=1.0pt] (O)--(X1);
-    \shade[ball color=atom!60] (O) circle (2.6pt); \shade[ball color=atom!60] (X1) circle (2.6pt);
-  \end{scope}}
-\cell{(0.15,2.9)}{}
-\node[small] at (0.85,1.8) {diamond cell};
-\draw[ar] (1.95,3.15) -- node[above, small, inner sep=2pt] {strain} (2.75,3.15);
-\cell{(2.95,2.9)}{xslant=0.3, yscale=0.85}
-\node[small] at (3.75,1.8) {strain $\varepsilon$};
-\draw[ar] (4.85,3.15) -- node[above, small, inner sep=2pt] {DFT} (5.65,3.15);
-% band-structure sketch, clipped to its frame
-\begin{scope}[shift={(5.85,2.35)}]
-  \begin{scope}
-    \clip (0,0) rectangle (1.75,1.6);
-    \draw[dat!80, line width=0.8pt] plot[domain=0:1.75, samples=30] (\x, {0.55 - 0.30*(\x)^2});
-    \draw[dat!80, line width=0.8pt] plot[domain=0:1.75, samples=30] (\x, {0.55 - 0.12*(\x)^2});
-    \draw[net, line width=0.8pt] plot[domain=0:1.75, samples=40] (\x, {1.05 + 0.55*(\x-1.3)^2});
-    \draw[net, line width=0.8pt] plot[domain=0:1.75, samples=40] (\x, {1.55 - 0.10*(\x)^2});
-  \end{scope}
-  \draw[black!55, line width=0.5pt] (0,0) rectangle (1.75,1.6);
-  \draw[black!35, densely dotted, line width=0.5pt] (0,0.55) -- (1.3,0.55);
-  \draw[black!75, <->, line width=0.55pt] (1.3,1.05) -- (1.3,0.55);
-  \node[small, anchor=west, inner sep=1.5pt] at (1.3,0.78) {$E_g$};
-  \fill[black!85] (0,0.55) circle (1.1pt); \fill[black!85] (1.3,1.05) circle (1.1pt);
-  \node[small, below, inner sep=1.5pt] at (0,0) {$\Gamma$}; \node[small, below, inner sep=1.5pt] at (1.75,0) {X};
+% ============================================================================ the strained crystal
+\begin{scope}[shift={(0.25,3.0)}, scale=1.25, xslant=0.3, yscale=0.85]
+  \coordinate (O) at (0,0); \coordinate (A) at (1.3,0.18); \coordinate (B) at (0.48,1.0); \coordinate (C) at (0.62,-0.62);
+  \fill[sky!25] (O)--(A)--($(A)+(B)$)--(B)--cycle;
+  \fill[sky!45] (O)--(C)--($(C)+(A)$)--(A)--cycle;
+  \draw[ink!70, line width=1pt] (O)--(A)--($(A)+(B)$)--(B)--cycle (O)--(C)--($(C)+(A)$)--(A) ($(C)+(A)$)--($(A)+(B)+(C)$)--($(A)+(B)$);
+  \draw[ink!40, line width=0.6pt, densely dashed] (C)--($(C)+(B)$)--(B) ($(C)+(B)$)--($(A)+(B)+(C)$);
+  \coordinate (X1) at ($0.25*(A)+0.25*(B)+0.25*(C)$);
+  \draw[ink, line width=1.8pt] (O)--(X1);
+  \shade[ball color=ink!60] (O) circle (4.5pt); \shade[ball color=ink!60] (X1) circle (4.5pt);
 \end{scope}
-\node[small] at (6.72,1.8) {band edges, gap};
-\draw[ar] (7.85,3.15) -- (8.55,3.15);
-% dataset: the five families
-\begin{scope}[shift={(8.75,2.35)}]
-  \draw[black!55, line width=0.5pt] (0,0) rectangle (2.7,1.6);
-  \foreach \y/\n in {1.38/isotropic, 1.10/uniaxial, 0.82/biaxial, 0.54/triaxial, 0.26/shear}{
-    \node[font=\footnotesize, anchor=west, inner sep=0pt, text=black!75] at (0.08,\y) {\n};
-    \foreach \x in {1.42,1.54,...,2.6}{ \fill[dat!65] (\x+0.03*rand,\y+0.045*rand) circle (0.6pt); }
-  }
-\end{scope}
-\node[small] at (10.1,1.8) {1,292 states, five families};
-\draw[ar] (11.6,3.15) -- (12.2,3.15);
-\node[lbl, anchor=west] at (12.3,3.2) {\begin{tabular}{@{}l@{\enspace}r@{}}training & 70\%\\ validation & 10\%\\ test & 20\%\end{tabular}};
-\node[small, anchor=west] at (12.3,2.15) {symmetry-equivalent\\states kept together};
+\node[font=\footnotesize, text=ink, align=center] at (1.35,1.55) {strained\\diamond};
+\coordinate (src) at (2.75,3.45);
 
-% =========================================================================================== b: our model
-\node[pl] at (-0.35, 1.0) {b};
-\node[lbl] (in) at (0.45,-0.45) {$\varepsilon$};
-\def\xa{1.15} \def\dx{0.5}
-\foreach \i in {1,...,6}{ \node[neuron] (i\i) at (\xa, {0.47-0.3*\i}) {}; }
-\foreach \l in {1,2}{ \foreach \j in {1,...,6}{ \node[neuron] (h\l\j) at ({\xa+\l*\dx}, {0.47-0.3*\j}) {}; } }
-\node[font=\small, text=net] at ({\xa+2.55*\dx}, -0.58) {$\cdots$};
-\foreach \j in {1,...,6}{ \node[neuron] (h3\j) at ({\xa+3.1*\dx}, {0.47-0.3*\j}) {}; }
-\foreach \k in {1,...,6}{ \node[neuron, fill=phys!15, draw=phys] (o\k) at ({\xa+4.1*\dx}, {0.47-0.3*\k}) {}; }
-\begin{scope}[on background layer]
-  \foreach \i in {1,...,6}{ \foreach \j in {1,...,6}{ \draw[edge] (i\i) -- (h1\j); \draw[edge] (h1\i) -- (h2\j); \draw[edge] (h3\i) -- (o\j); } }
-\end{scope}
-\draw[ar] (in.east) -- ($(i3)!0.5!(i4)+(-0.12,0)$);
-\node[small] at ({\xa+1.55*\dx}, -1.65) {8 layers $\times$ 64};
-\node[small, text=phys!85!black] at ({\xa+4.1*\dx}, 0.45) {13 outputs};
-\node[lbl, anchor=west] (theta) at (3.65,-0.58) {$\theta_k(\varepsilon) = \theta_k^{0} + \sigma_k\, f_k(\varepsilon)$\\[2pt]{\footnotesize\color{black!70} calibrated $+$ learned}};
-\draw[ar] ({\xa+4.1*\dx+0.15}, -0.58) -- (theta.west);
-\node[physbox, anchor=west] (an) at (7.75,-0.58) {%
-  {\footnotesize\bfseries\color{phys!85!black} analytic band-edge models}\\[2pt]
-  $E_{\mathrm{CBM}} = E^0_{\mathrm{CBM}} + \min_{v}\Delta_v(\varepsilon;\theta)$\\[1pt]
-  $E_{\mathrm{VBM}} = E^0_{\mathrm{VBM}} + \lambda_{\max}H(\varepsilon;\theta)$};
-\draw[ar] (theta.east) -- (an.west);
-\node[lbl, anchor=west] (out) at (12.45,-0.58) {$\hat{E}_{\mathrm{CBM}},\ \hat{E}_{\mathrm{VBM}}$\\[2pt]$\hat{E}_g = \hat{E}_{\mathrm{CBM}} - \hat{E}_{\mathrm{VBM}}$};
-\draw[ar] (an.east) -- (out.west);
-\node[lbl, anchor=west] at (3.3,-2.25) {objective:\enspace $\mathcal{L} = \mathcal{L}_{\mathrm{data}} + s(n)\,\mathcal{L}_{\mathrm{agree}} + \mathcal{L}_{\mathrm{zero}} + \mathcal{L}_{\mathrm{sym}} + \mathcal{L}_{\mathrm{curv}}$};
-\begin{scope}[shift={(13.05,-2.75)}]
-  \draw[black!55, ->, line width=0.5pt] (0,0) -- (1.55,0) node[right, small, inner sep=1pt] {$n$};
-  \draw[black!55, ->, line width=0.5pt] (0,0) -- (0,0.9) node[above, small, inner sep=1pt] {$s$};
-  \draw[phys, line width=0.9pt] (0,0.7) -- (0.22,0.7) plot[domain=0.22:1.45, samples=40] (\x, {0.7*0.22/\x});
-  \node[small, anchor=west] at (0.5,0.62) {$s = \min(1, 9/n)$};
-\end{scope}
-\node[small, text=black!65] at (13.85,-3.05) {$n$: labeled states};
+% ============================================================================ four kinds of model
+\foreach \y/\c/\n in {6.0/mlp/MLP, 4.3/pinn/{SA-, RBA-, NTK-PINN}, 2.6/delta/{Residual, APHYNITY}, 0.9/phm/{PHM (this work)}}{
+  \draw[ink, line width=1pt] (src) -- (3.45,\y) -- (7.15,\y);
+  \node[mname, text=ink] at (5.2,\y+0.04) {\n};
+}
+\begin{scope}[on background layer]\fill[phm!8, rounded corners=5pt] (3.25,0.05) rectangle (15.75,1.82);\end{scope}
 
-% =========================================================================================== c: where the physics enters
-\node[pl] at (-0.35, -3.45) {c};
-\newcommand{\minimodel}[5]{% #1 x, #2 title, #3 physics in loss (1/0), #4 physics in output (0 none, 1 added, 2 inside), #5 note
-  \begin{scope}[shift={(#1,-4.7)}]
-    \node[font=\footnotesize\bfseries, text=black!85, anchor=west] at (-0.1,0.9) {#2};
-    \node[small] (e) at (0,0) {$\varepsilon$};
-    \foreach \c in {0,1,2}{ \foreach \r in {1,2,3}{ \node[neuron, minimum size=3.6pt] (n\c\r) at ({0.42+0.3*\c}, {0.28-0.2*\r+0.12}) {}; } }
-    \begin{scope}[on background layer]
-      \foreach \a in {1,2,3}{ \foreach \b in {1,2,3}{ \draw[edge] (n0\a) -- (n1\b); \draw[edge] (n1\a) -- (n2\b); } }
-    \end{scope}
-    \draw[ar, line width=0.5pt] (e) -- (0.33,0);
-    \ifnum#4=0 \draw[ar, line width=0.5pt] (1.12,0) -- (2.1,0) node[right, small, inner sep=1pt] {$\hat{E}$}; \fi
-    \ifnum#4=1
-      \draw[ar, line width=0.5pt] (1.12,0) -- (1.5,0);
-      \node[circle, draw=phys, line width=0.6pt, inner sep=0pt, minimum size=7pt, font=\footnotesize, text=phys] (plus) at (1.62,0) {$+$};
-      \node[font=\footnotesize, text=phys!85!black, anchor=west] (an) at (1.85,0.42) {analytic};
-      \draw[->, phys, line width=0.5pt] (an.west) to[out=180, in=90] (plus.north);
-      \draw[ar, line width=0.5pt] (plus) -- (2.1,0) node[right, small, inner sep=1pt] {$\hat{E}$};
-    \fi
-    \ifnum#4=2
-      \draw[ar, line width=0.5pt] (1.12,0) -- (1.32,0);
-      \node[physbox, inner sep=1.3pt, font=\footnotesize, align=center, anchor=west] (ph) at (1.32,0) {analytic\\[-2pt]form};
-      \draw[ar, line width=0.5pt] (ph.east) -- ++(0.35,0) node[right, small, inner sep=1pt] {$\hat{E}$};
-    \fi
-    \node[small, anchor=west] at (-0.1,-0.55) {loss: data\ifnum#3=1 {} + {\color{phys!85!black}physics}\fi};
-    \node[font=\footnotesize, text=black!60, anchor=north west, align=left, inner sep=0pt] at (-0.1,-0.75) {#5};
-  \end{scope}}
-\minimodel{0.2}{MLP}{0}{0}{no physics}
-\minimodel{4.05}{SA-PINN, RBA-PINN}{1}{0}{physics in the loss,\\adaptive weights}
-\minimodel{7.9}{$\Delta$-learning}{0}{1}{physics added\\to the output}
-\minimodel{11.75}{Our model}{1}{2}{physics in the output\\and in the loss, weight $s(n)$}
-\begin{scope}[on background layer]
-  \foreach \x in {3.8, 7.65, 11.5}{ \draw[black!15, line width=0.5pt] (\x,-3.6) -- (\x,-6.0); }
-  \draw[black!15, line width=0.5pt] (-0.35,1.3) -- (16.0,1.3);
-  \draw[black!15, line width=0.5pt] (-0.35,-3.35) -- (16.0,-3.35);
-\end{scope}
+% MLP: network only
+\node[frame] at (8.30,6.0) {}; \net{(8.30,6.0)}{mlp}{1.05}
+% PINNs: theory checks the network's answers during training
+\node[frame] at (8.30,4.3) {}; \net{(7.90,4.3)}{pinn}{0.85} \book{(8.90,4.3)}{0.95}
+\node[circle, fill=white, draw=theory, line width=0.9pt, inner sep=0pt, minimum size=0.36cm] at (9.22,3.92) {};
+\draw[theory, line width=1.2pt, line cap=round, line join=round] (9.13,3.93) -- (9.20,3.85) -- (9.32,4.01);
+% residual model and APHYNITY: theory plus a network correction
+\node[frame] at (8.30,2.6) {}; \book{(7.68,2.6)}{0.95}
+\node[font=\small\bfseries, text=ink] at (8.20,2.6) {+}; \net{(8.85,2.6)}{delta}{0.8}
+% PHM: the network inside the theory
+\node[frame, draw=phm, line width=1pt] at (8.30,0.9) {};
+\fill[theory!10, rounded corners=2pt] (7.65,0.32) rectangle (9.05,1.48);
+\draw[theory, line width=1.1pt, rounded corners=2pt] (7.65,0.32) rectangle (9.05,1.48);
+\fill[theory] (7.65,0.32) rectangle (7.80,1.48);
+\net{(8.45,0.9)}{phm}{0.95}
+
+% arrows, what each model does, and the predicted bandgap
+\foreach \y/\c/\t in {6.0/mlp/{learns from the data only}, 4.3/pinn/{theory checks its answers},
+                      2.6/delta/{corrects the theory}, 0.9/phm/{theory built in}}{
+  \draw[->, \c, line width=1.4pt] (9.5,\y) -- (13.2,\y);
+  \node[note] at (11.35,\y+0.06) {\t};
+  \tile{(13.95,\y)}{\c}
+  \draw[dashln] (14.6,\y) -- (15.3,\y);
+}
+\node[font=\footnotesize, text=ink, align=center, anchor=south] at (13.95,6.68) {predicted bandgap};
+
+% comparison with the quantum simulation, closing the loop to the crystal
+\draw[dashln] (15.3,6.0) -- (15.3,-0.75) -- (11.05,-0.75);
+\node[draw=ink!80, fill=white, line width=0.9pt, rounded corners=3pt, font=\footnotesize, text=ink, inner sep=5pt]
+  (cmp) at (8.3,-0.75) {compared with quantum simulation (DFT)};
+\draw[dashln] (cmp.west) -- (1.35,-0.75) -- (1.35,1.15);
+\node[font=\footnotesize, text=ink, anchor=south] at (3.4,-0.72) {1,292 crystals};
 \end{tikzpicture}
 \end{document}

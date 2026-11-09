@@ -7,6 +7,6 @@ def row(p):
     t = pd.read_csv(p + "/test_results.csv"); e = (t.Eg_pred_eV - t.Eg_true_eV).abs().values * 1000; fm = fam[t.sample_id.values.astype(int)]
     r = {"all": e.mean()}; r.update({k: e[fm == k].mean() for k in ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]}); return r
 for pct in (5, 25):
-    rows = {v: pd.DataFrame([row("%s/results/%s/seed%d" % (ROOT, ("B_main/hyb_sdp_gap_ld9/%dpct" % pct) if v == "final" else ("B_shear_variants/%s/%dpct" % (v, pct)), s)) for s in (42, 43, 44)]).mean()
+    rows = {v: pd.DataFrame([row("%s/results/%s/seed%d" % (ROOT, ("B_main/phm/%dpct" % pct) if v == "final" else ("B_shear_variants/%s/%dpct" % (v, pct)), s)) for s in (42, 43, 44)]).mean()
             for v in ("final", "head", "sup", "focus", "both")}
     print("\n%d%% labeled, test MAE (meV)" % pct); print(pd.DataFrame(rows).T.round(1).to_string())

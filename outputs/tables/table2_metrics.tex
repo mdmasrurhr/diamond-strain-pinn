@@ -1,26 +1,30 @@
-\begin{tabular}{lrrrrrrrrr}
+\begin{tabular}{lrrrrrrrrrrr}
 \toprule
- & \multicolumn{6}{c}{\textbf{Accuracy}} & \multicolumn{3}{c}{\textbf{Physical validity}} \\
-\cmidrule(lr){2-7}\cmidrule(l){8-10}
-\textbf{Model} & \textbf{MAE} & \textbf{RMSE} & \textbf{P95} & \textbf{Max} & \textbf{$R^2$} & \textbf{Sign} & \textbf{DP error} & \textbf{Shear slope} & \textbf{Axis drift} \\
- & (meV) & (meV) & (meV) & (meV) & & (\%) & (eV) & (eV) & (meV) \\
+ & \multicolumn{8}{c}{\textbf{Accuracy}} & \multicolumn{3}{c}{\textbf{Physical validity}} \\
+\cmidrule(lr){2-9}\cmidrule(l){10-12}
+\textbf{Model} & \textbf{MAE} & \textbf{MAPE} & \textbf{Within 10 meV} & \textbf{RMSE} & \textbf{P95} & \textbf{Max} & \textbf{$R^2$} & \textbf{Sign} & \textbf{DP error} & \textbf{Shear slope} & \textbf{Axis drift} \\
+ & (meV) & (\%) & (\%) & (meV) & (meV) & (meV) & & (\%) & (eV) & (eV) & (meV) \\
 \midrule
-Analytic models alone & 51.3 $\pm$ 6.3 & 72.7 & 131.4 & 300 & 0.993 & 98.7 & 0.516 & 0.00 & 0.0 \\
+Analytic models alone & 36.9 $\pm$ 5.5 & 0.93 & 22 & 58.7 & 110.4 & 272 & 0.995 & 99.5 & 0.488 & 0.00 & 0.0 \\
 \addlinespace
-\multicolumn{10}{l}{\textit{5\% of the training states labeled (45 calculations)}} \\
-Our model & 30.4 $\pm$ 6.3 & 54.7 & 103.4 & 297 & 0.996 & 99.6 & 0.012 & 1.40 & 11.9 \\
-SA-PINN & 53.4 $\pm$ 6.7 & 77.0 & 140.5 & 352 & 0.992 & 99.5 & 0.432 & 1.48 & 23.7 \\
-RBA-PINN & 53.5 $\pm$ 6.7 & 78.0 & 151.0 & 349 & 0.991 & 99.6 & 0.501 & 2.16 & 32.3 \\
-$\Delta$-learning & 48.6 $\pm$ 8.9 & 82.8 & 157.5 & 473 & 0.989 & 99.5 & 0.006 & 0.94 & 39.1 \\
-MLP & 274.3 $\pm$ 46.3 & 407.9 & 902.8 & 1672 & 0.765 & 96.1 & 0.059 & 4.44 & 273.0 \\
-Gaussian process & 300.0 $\pm$ 61.9 & -- & -- & -- & 0.721 & -- & -- & -- & -- \\
+\multicolumn{12}{l}{\textit{5\% of the training states labeled (45 calculations)}} \\
+PHM & 18.1 $\pm$ 4.6 & 0.46 & 55 & 37.9 & 66.5 & 224 & 0.998 & 99.9 & 0.031 & 0.08 & 3.0 \\
+Residual model & 17.8 $\pm$ 5.3 & 0.45 & 55 & 35.4 & 66.1 & 195 & 0.998 & 99.7 & 0.009 & 0.08 & 1.5 \\
+SA-PINN & 43.7 $\pm$ 5.4 & 1.11 & 16 & 66.0 & 128.0 & 315 & 0.994 & 99.5 & 0.477 & 0.51 & 19.7 \\
+RBA-PINN & 46.3 $\pm$ 4.7 & 1.18 & 19 & 70.4 & 146.8 & 344 & 0.993 & 99.5 & 0.494 & 0.68 & 30.7 \\
+NTK-PINN & 45.6 $\pm$ 4.8 & 1.14 & 21 & 70.8 & 147.8 & 348 & 0.993 & 99.8 & 0.245 & 0.64 & 34.0 \\
+APHYNITY & 35.5 $\pm$ 5.1 & 0.90 & 31 & 59.8 & 115.2 & 322 & 0.995 & 99.7 & 0.217 & 1.11 & 21.7 \\
+MLP & 274.3 $\pm$ 46.3 & 7.56 & 7 & 407.9 & 902.8 & 1672 & 0.765 & 96.1 & 0.059 & 4.44 & 273.0 \\
+Gaussian process & 300.0 $\pm$ 61.9 & -- & -- & -- & -- & -- & 0.721 & -- & -- & -- & -- \\
 \addlinespace
-\multicolumn{10}{l}{\textit{100\% of the training states labeled (893--900 calculations)}} \\
-Our model & 7.8 $\pm$ 2.7 & 20.6 & 30.4 & 154 & 0.999 & 99.8 & 0.007 & 0.24 & 5.3 \\
-SA-PINN & 53.3 $\pm$ 6.5 & 76.5 & 144.3 & 336 & 0.992 & 99.2 & 0.396 & 2.59 & 25.4 \\
-RBA-PINN & 33.9 $\pm$ 3.5 & 51.9 & 102.8 & 253 & 0.996 & 99.8 & 0.519 & 0.51 & 20.8 \\
-$\Delta$-learning & 7.8 $\pm$ 2.6 & 21.1 & 35.5 & 146 & 0.999 & 99.5 & 0.005 & 0.63 & 8.5 \\
-MLP & 11.4 $\pm$ 2.9 & 29.2 & 59.2 & 190 & 0.999 & 100.0 & 0.002 & 0.30 & 16.2 \\
-Gaussian process & 72.5 $\pm$ 6.7 & -- & -- & -- & 0.987 & -- & -- & -- & -- \\
+\multicolumn{12}{l}{\textit{100\% of the training states labeled (893--900 calculations)}} \\
+PHM & 5.6 $\pm$ 2.3 & 0.14 & 90 & 19.0 & 26.8 & 143 & 0.999 & 100.0 & 0.001 & 0.07 & 1.9 \\
+Residual model & 5.4 $\pm$ 3.0 & 0.13 & 90 & 17.7 & 26.6 & 131 & 0.999 & 99.8 & 0.003 & 0.08 & 1.6 \\
+SA-PINN & 43.9 $\pm$ 5.3 & 1.13 & 16 & 66.2 & 133.4 & 300 & 0.994 & 99.4 & 0.472 & 0.69 & 20.5 \\
+RBA-PINN & 29.5 $\pm$ 4.3 & 0.76 & 31 & 49.7 & 99.2 & 257 & 0.996 & 99.5 & 0.499 & 0.61 & 22.6 \\
+NTK-PINN & 35.3 $\pm$ 5.5 & 0.89 & 24 & 55.3 & 114.6 & 280 & 0.996 & 99.6 & 0.499 & 0.32 & 26.0 \\
+APHYNITY & 6.7 $\pm$ 1.6 & 0.16 & 87 & 18.9 & 25.2 & 149 & 0.999 & 99.8 & 0.510 & 2.53 & 8.2 \\
+MLP & 11.4 $\pm$ 2.9 & 0.27 & 78 & 29.2 & 59.2 & 190 & 0.999 & 100.0 & 0.002 & 0.30 & 16.2 \\
+Gaussian process & 72.5 $\pm$ 6.7 & -- & -- & -- & -- & -- & 0.987 & -- & -- & -- & -- \\
 \bottomrule
 \end{tabular}
