@@ -1,110 +1,72 @@
-% Figure 1 of the manuscript: one strained diamond crystal feeds four kinds of model, which differ in where the
-% textbook theory sits; every predicted bandgap is compared with quantum simulation (DFT) of the same crystal.
-% Okabe-Ito colours, drawn at final size (lettering 9-10 pt). Compile standalone:
+% Figure 1 of the manuscript: where the theory (the analytic band-edge models) enters each kind of model. Colours as in
+% Figs 2-5; 7 pt text at final size. Compile standalone:
 %   pdflatex -output-directory figures/v3 figures/src_fig1_workflow_v3.tex   (then rename to fig1_workflow.pdf)
-\documentclass[11pt,border=2pt]{standalone}
+\documentclass[10pt,border=2pt]{standalone}
 \usepackage[T1]{fontenc}
 \usepackage{tgheros}
 \renewcommand*\familydefault{\sfdefault}
 \usepackage{amsmath}
 \usepackage{sfmath}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, calc, backgrounds}
-% ---------------------------------------------------------------- Okabe-Ito palette (colour-blind safe), same colours as Figs 2-5
+\usetikzlibrary{arrows.meta}
+
 \definecolor{phm}{HTML}{009E73}
 \definecolor{pinn}{HTML}{0072B2}
-\definecolor{delta}{HTML}{CC79A7}
+\definecolor{res}{HTML}{CC79A7}
 \definecolor{mlp}{HTML}{D55E00}
-\definecolor{ink}{HTML}{1E2A33}
-\colorlet{theory}{ink}
-\definecolor{sky}{HTML}{56B4E9}
+\definecolor{ink}{HTML}{222B32}
+
 \tikzset{
-  >={Stealth[length=6pt,width=5pt]},
-  mname/.style={font=\small\bfseries, anchor=south},
-  note/.style={font=\footnotesize, text=ink, anchor=south},
-  frame/.style={draw=ink!45, line width=0.6pt, minimum width=2.3cm, minimum height=1.45cm},
-  dashln/.style={ink!75, line width=0.9pt, dash pattern=on 3pt off 2pt},
+  >={Stealth[length=4pt,width=3.2pt]},
+  font=\scriptsize,
+  color=ink,
+  mname/.style={font=\scriptsize\bfseries, anchor=west, align=left},
+  net/.style={draw=#1, fill=#1!18, line width=0.6pt, rounded corners=1.5pt, minimum width=1.25cm, minimum height=0.44cm, inner sep=0pt},
+  theory/.style={fill=ink!85, text=white, rounded corners=1.5pt, minimum width=1.25cm, minimum height=0.44cm, inner sep=0pt},
+  flow/.style={->, line width=0.6pt, draw=ink!80},
 }
-% neural network: centre #1, colour #2, scale #3
-\newcommand{\net}[3]{%
-  \begin{scope}[shift={#1}, scale=#3]
-    \foreach \a in {-0.25,0,0.25}{\foreach \b in {-0.36,-0.12,0.12,0.36}{\draw[#2!60, line width=0.45pt] (-0.45,\a) -- (0,\b);}}
-    \foreach \a in {-0.36,-0.12,0.12,0.36}{\foreach \b in {-0.25,0,0.25}{\draw[#2!60, line width=0.45pt] (0,\a) -- (0.45,\b);}}
-    \foreach \y in {-0.25,0,0.25}{\fill[white] (-0.45,\y) circle (0.085); \draw[#2, line width=0.9pt] (-0.45,\y) circle (0.085);
-                                   \fill[white] (0.45,\y) circle (0.085); \draw[#2, line width=0.9pt] (0.45,\y) circle (0.085);}
-    \foreach \y in {-0.36,-0.12,0.12,0.36}{\fill[#2] (0,\y) circle (0.085);}
-  \end{scope}}
-% textbook theory (a closed book): centre #1, scale #2
-\newcommand{\book}[2]{%
-  \begin{scope}[shift={#1}, scale=#2]
-    \fill[theory!10, rounded corners=1.5pt] (-0.36,-0.46) rectangle (0.36,0.46);
-    \draw[theory, line width=1pt, rounded corners=1.5pt] (-0.36,-0.46) rectangle (0.36,0.46);
-    \fill[theory] (-0.36,-0.46) rectangle (-0.24,0.46);
-    \foreach \y in {0.26,0.12,-0.02}{\draw[theory, line width=0.9pt, line cap=round] (-0.12,\y) -- (0.24,\y);}
-  \end{scope}}
-% predicted bandgap (two band edges and the gap): centre #1, tile colour #2
-\newcommand{\tile}[2]{%
-  \begin{scope}[shift={#1}]
-    \fill[#2, rounded corners=3pt] (-0.62,-0.62) rectangle (0.62,0.62);
-    \fill[white, rounded corners=1pt] (-0.4,0.2) rectangle (0.4,0.36);
-    \fill[white, rounded corners=1pt] (-0.4,-0.36) rectangle (0.4,-0.2);
-    \draw[<->, white, line width=1.1pt, >={Stealth[length=3.5pt,width=4pt]}] (0,-0.17) -- (0,0.17);
-  \end{scope}}
+
 \begin{document}
-\begin{tikzpicture}
+\begin{tikzpicture}[x=1cm, y=1cm]
 
-% ============================================================================ the strained crystal
-\begin{scope}[shift={(0.25,3.0)}, scale=1.25, xslant=0.3, yscale=0.85]
-  \coordinate (O) at (0,0); \coordinate (A) at (1.3,0.18); \coordinate (B) at (0.48,1.0); \coordinate (C) at (0.62,-0.62);
-  \fill[sky!25] (O)--(A)--($(A)+(B)$)--(B)--cycle;
-  \fill[sky!45] (O)--(C)--($(C)+(A)$)--(A)--cycle;
-  \draw[ink!70, line width=1pt] (O)--(A)--($(A)+(B)$)--(B)--cycle (O)--(C)--($(C)+(A)$)--(A) ($(C)+(A)$)--($(A)+(B)+(C)$)--($(A)+(B)$);
-  \draw[ink!40, line width=0.6pt, densely dashed] (C)--($(C)+(B)$)--(B) ($(C)+(B)$)--($(A)+(B)+(C)$);
-  \coordinate (X1) at ($0.25*(A)+0.25*(B)+0.25*(C)$);
-  \draw[ink, line width=1.8pt] (O)--(X1);
-  \shade[ball color=ink!60] (O) circle (4.5pt); \shade[ball color=ink!60] (X1) circle (4.5pt);
-\end{scope}
-\node[font=\footnotesize, text=ink, align=center] at (1.35,1.55) {strained\\diamond};
-\coordinate (src) at (2.75,3.45);
+  % MLP: no theory
+  \node[mname] at (0, 3.78) {MLP};
+  \node (e1) at (2.25, 3.78) {$\varepsilon$};
+  \node[net=mlp] (n1) at (3.3, 3.78) {Network};
+  \node (g1) at (6.85, 3.78) {$\hat{E}_g$};
+  \draw[flow] (e1) -- (n1); \draw[flow] (n1) -- (g1);
 
-% ============================================================================ four kinds of model
-\foreach \y/\c/\n in {6.0/mlp/MLP, 4.3/pinn/{SA-, RBA-, NTK-PINN}, 2.6/delta/{Residual, APHYNITY}, 0.9/phm/{PHM (this work)}}{
-  \draw[ink, line width=1pt] (src) -- (3.45,\y) -- (7.15,\y);
-  \node[mname, text=ink] at (5.2,\y+0.04) {\n};
-}
-\begin{scope}[on background layer]\fill[phm!8, rounded corners=5pt] (3.25,0.05) rectangle (15.75,1.82);\end{scope}
+  % PINNs: theory in the training objective
+  \node[mname] at (0, 2.82) {PINNs};
+  \node (e2) at (2.25, 2.82) {$\varepsilon$};
+  \node[net=pinn] (n2) at (3.3, 2.82) {Network};
+  \node (g2) at (6.85, 2.82) {$\hat{E}_g$};
+  \node[theory] (t2) at (8.78, 2.82) {Theory};
+  \draw[flow] (e2) -- (n2); \draw[flow] (n2) -- (g2);
+  \draw[line width=0.6pt, draw=ink!80, dash pattern=on 2.5pt off 1.5pt] (g2) -- node[above=0.5pt] {objective} (t2);
 
-% MLP: network only
-\node[frame] at (8.30,6.0) {}; \net{(8.30,6.0)}{mlp}{1.05}
-% PINNs: theory checks the network's answers during training
-\node[frame] at (8.30,4.3) {}; \net{(7.90,4.3)}{pinn}{0.85} \book{(8.90,4.3)}{0.95}
-\node[circle, fill=white, draw=theory, line width=0.9pt, inner sep=0pt, minimum size=0.36cm] at (9.22,3.92) {};
-\draw[theory, line width=1.2pt, line cap=round, line join=round] (9.13,3.93) -- (9.20,3.85) -- (9.32,4.01);
-% residual model and APHYNITY: theory plus a network correction
-\node[frame] at (8.30,2.6) {}; \book{(7.68,2.6)}{0.95}
-\node[font=\small\bfseries, text=ink] at (8.20,2.6) {+}; \net{(8.85,2.6)}{delta}{0.8}
-% PHM: the network inside the theory
-\node[frame, draw=phm, line width=1pt] at (8.30,0.9) {};
-\fill[theory!10, rounded corners=2pt] (7.65,0.32) rectangle (9.05,1.48);
-\draw[theory, line width=1.1pt, rounded corners=2pt] (7.65,0.32) rectangle (9.05,1.48);
-\fill[theory] (7.65,0.32) rectangle (7.80,1.48);
-\net{(8.45,0.9)}{phm}{0.95}
+  % residual model and APHYNITY: theory plus a network correction
+  \node[mname] at (0, 1.72) {Residual model,\\APHYNITY};
+  \node (e3) at (2.25, 1.72) {$\varepsilon$};
+  \coordinate (s3) at (2.52, 1.72);
+  \node[theory] (t3) at (3.3, 1.98) {Theory};
+  \node[net=res] (n3) at (3.3, 1.46) {Network};
+  \node[circle, draw=ink!80, line width=0.6pt, inner sep=0.3pt] (p3) at (5.72, 1.72) {$+$};
+  \node (g3) at (6.85, 1.72) {$\hat{E}_g$};
+  \draw[line width=0.6pt, draw=ink!80] (e3) -- (s3);
+  \draw[flow] (s3) |- (t3); \draw[flow] (s3) |- (n3);
+  \draw[flow] (t3) -| (p3); \draw[flow] (n3) -| (p3);
+  \draw[flow] (p3) -- (g3);
 
-% arrows, what each model does, and the predicted bandgap
-\foreach \y/\c/\t in {6.0/mlp/{learns from the data only}, 4.3/pinn/{theory checks its answers},
-                      2.6/delta/{corrects the theory}, 0.9/phm/{theory built in}}{
-  \draw[->, \c, line width=1.4pt] (9.5,\y) -- (13.2,\y);
-  \node[note] at (11.35,\y+0.06) {\t};
-  \tile{(13.95,\y)}{\c}
-  \draw[dashln] (14.6,\y) -- (15.3,\y);
-}
-\node[font=\footnotesize, text=ink, align=center, anchor=south] at (13.95,6.68) {predicted bandgap};
+  % PHM: the network sets the constants of the theory
+  \node[mname] at (0, 0.55) {PHM};
+  \node (e4) at (2.25, 0.55) {$\varepsilon$};
+  \node[net=phm] (n4) at (3.3, 0.55) {Network};
+  \node[theory] (t4) at (5.72, 0.55) {Theory};
+  \node (g4) at (6.85, 0.55) {$\hat{E}_g$};
+  \draw[flow] (e4) -- (n4);
+  \draw[flow] (n4) -- node[above=0.5pt] {constants} (t4);
+  \draw[flow] (t4) -- (g4);
 
-% comparison with the quantum simulation, closing the loop to the crystal
-\draw[dashln] (15.3,6.0) -- (15.3,-0.75) -- (11.05,-0.75);
-\node[draw=ink!80, fill=white, line width=0.9pt, rounded corners=3pt, font=\footnotesize, text=ink, inner sep=5pt]
-  (cmp) at (8.3,-0.75) {compared with quantum simulation (DFT)};
-\draw[dashln] (cmp.west) -- (1.35,-0.75) -- (1.35,1.15);
-\node[font=\footnotesize, text=ink, anchor=south] at (3.4,-0.72) {1,292 crystals};
 \end{tikzpicture}
 \end{document}

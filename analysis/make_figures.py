@@ -232,7 +232,7 @@ fig.tight_layout(rect=(0, 0.09, 1, 1), w_pad=2.0); save(fig, "sfig2_training", s
 # ------------------------------------------------------------------ Supplementary Figure 3: symmetry drift with 896 labels
 sm = [FINAL, SA, RBA, RES, MLP]
 fig, ax = plt.subplots(1, 2, figsize=(W, 2.8))
-for a, col, lab, yl in zip(ax, ("axis", "shearsign"), ("a", "b"), ("Change under axis relabelling (meV)", "Change under shear reversal (meV)")):
+for a, col, lab, yl in zip(ax, ("axis", "shearsign"), ("a", "b"), ("Change under axis relabeling (meV)", "Change under shear reversal (meV)")):
     for i, m in enumerate(sm):
         bars(a, i, M[(M.model == m) & (M.level == 100)][col].values, m, 0.7)
     a.set_xticks(range(len(sm))); a.set_xticklabels([STY[m]["lab"] for m in sm], rotation=25, ha="right", rotation_mode="anchor"); a.set_ylabel(yl); a.set_ylim(0, None); letter(a, lab, x=-0.2)
@@ -293,7 +293,7 @@ def strips(a, groups, labels):
     a.set_yscale("log"); a.set_ylim(0.05, 400); plain_log(a.yaxis, [0.1, 1, 10, 100]); a.set_xticks(range(len(groups))); a.set_xticklabels(labels); a.set_xlim(-0.6, len(groups) - 0.4)
 strips(ax[0], [SHD[SHD.planes == k] for k in (1, 2, 3)], ["1", "2", "3"]); ax[0].set_xlabel("Sheared planes"); ax[0].set_ylabel("Error per test state (meV)"); letter(ax[0], "a", x=-0.28)
 M23 = SHD[SHD.planes >= 2]
-strips(ax[1], [M23[~M23.valley_change], M23[M23.valley_change]], ["same", "different"]); ax[1].set_xlabel("Lowest conduction valley\nof the neighbouring states"); letter(ax[1], "b", x=-0.28); ax[1].set_yticklabels([])
+strips(ax[1], [M23[~M23.valley_change], M23[M23.valley_change]], ["same", "different"]); ax[1].set_xlabel("Lowest conduction valley\nof the neighboring states"); letter(ax[1], "b", x=-0.28); ax[1].set_yticklabels([])
 for k, mk in ((1, "o"), (2, "s"), (3, "^")):
     g = SHD[SHD.planes == k]; ax[2].scatter(np.maximum(g.margin * 1000, 1), np.maximum(g.err_ours, 0.05), s=6, marker=mk, color="#009E73", alpha=0.6, linewidths=0, label="%d plane%s" % (k, "" if k == 1 else "s"))
 ax[2].axvline(300, color="black", lw=0.75, ls="--"); ax[2].set_xscale("log"); ax[2].set_yscale("log"); ax[2].set_ylim(0.05, 400); plain_log(ax[2].yaxis, [0.1, 1, 10, 100]); plain_log(ax[2].xaxis, [1, 10, 100, 1000])

@@ -6,7 +6,7 @@ model is now "PHM old"; it is not part of this screen.
 
 "base" is PHM as in the paper (identical to 03_train_pinn.py, res_const_symlab_bal). Every other variant changes
 one part of it (VARIANTS below); "final" is the combination the screen adopted, identical to phm.py.
-Results of the screen: 10_independent_check/phm_screen/ (comparison/decisions.txt).
+The screen writes its runs and reports to the output folder given to the commands below.
 
 Commands (python phm_ablations.py <command> -h shows the options):
   constants   fit theta0 for every seed (and labeled fraction, where a variant needs it)  -> <out>/constants/

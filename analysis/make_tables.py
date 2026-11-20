@@ -258,6 +258,8 @@ for f in FAMS + ["total"]:
                  rng_(c.train), rng_(c.val), rng_(c.test), srange, ev.min(), ev.max()))
 lines += ["\\bottomrule", "\\end{tabular}"]; open(os.path.join(OUT, "table1_dataset.tex"), "w").write("\n".join(lines) + "\n")
 for f in FAMS: put("n_%s" % f, "%d" % (fam_all == f).sum())
+_sv = np.abs(DATA[SC].values) * 100; put("strain_pct_max", "%.0f" % _sv.max()); check("strain_pct_max_about_10", round(_sv.max()) == 10)
+put("gap_range_all", "%.1f to %.1f" % (DATA.Eg_eV.min(), DATA.Eg_eV.max()))   # Introduction, contributions
 
 # ------------------------------------------------------------------ 4. key metrics (Table 2) and comparisons
 KM = ["MAE_meV", "RMSE_meV", "P95_meV", "max_meV", "R2", "sign", "dp_err", "shear_slope", "axis", "shearsign"]
@@ -388,7 +390,7 @@ check("res_pattern", _rb == [0, 1, 2] and _rw == [10])
 _others = (SA, RBA, NTK, APH, MLP)
 _ps = [COMP[(c, k)][i]["p_adj"] for c in _others for k in ("axis", "shearsign") for i in (0, 1)]
 put("sym_others_pmax", pmax(_ps)); check("sym_phm_below_others", all(COMP[(c, k)][i]["diff"] > 0 for c in _others for k in ("axis", "shearsign") for i in (0, 1)) and max(_ps) < 0.05)
-r = COMP[(RES, "axis")][0]; register("stat_axis_res_45", "axis-relabelling drift, residual model vs the PHM, 5% labeled", r, "meV", 1, sign=-1)
+r = COMP[(RES, "axis")][0]; register("stat_axis_res_45", "axis-relabeling drift, residual model vs the PHM, 5% labeled", r, "meV", 1, sign=-1)
 put("axis_res_p_896", pval(COMP[(RES, "axis")][1]["p_adj"]))
 for lv in (5, 100):
     _v = [mean(c, lv, "axis") for c in _others]; put("axis_others_%d_range" % NL[lv], "%.1f to %.0f" % (min(_v), max(_v)))
@@ -400,6 +402,7 @@ ratio45 = mean(MLP, 5) / mean(FINAL, 5); put("ratio_mlp_45", "%.1f" % ratio45); 
 r = COMP[(MLP, "sign")][0]; register("stat_sign_mlp_45", "sign accuracy, the PHM vs MLP, 5% labeled", r, "percentage points", 1, sign=-1)
 check("sign_ours_above_mlp_45", r["diff"] < 0 and r["p_adj"] < 0.05)
 check("sign_physics_models_high", all(mean(m, lv, "sign") > 99 for m in (FINAL, RES, SA, RBA) for lv in (5, 100)))
+check("sign_ours_896_above_99_9", mean(FINAL, 100, "sign") > 99.9)   # Introduction: "more than 99.9% of the test states"
 x0 = series(FINAL, 0); y0 = FORM.set_index("seed").MAE_meV
 r = compare(x0, y0); r["p_adj"], r["p_w_adj"] = r["p"], r["p_w"]
 register("stat_formula_0", "MAE, analytic models vs the PHM, 0% labeled", r, "meV")
@@ -415,6 +418,8 @@ for m, key in [(SA, "sa"), (RBA, "rba"), (NTK, "ntk")]:
     put("%s_cross" % key, "%d" % NL[first]); put("%s_cross_pct" % key, "%d" % first); put("mae_%s_cross" % key, num(mean(m, first))); put("mae_mlp_%s_cross" % key, num(mean(MLP, first)))
     register("stat_%s_cross" % key, "MAE, %s vs MLP, %s%% labeled" % (NAME[m], PCT[first]), vsm[m][LV.index(first)], "meV", 1, sign=-1)
 put("ours_vs_mlp_pmax", pmax([r["p_adj"] for r in vsm[FINAL]])); check("ours_better_every_volume", all(r["diff"] > 0 and r["p_adj"] < 0.05 for r in vsm[FINAL]))
+vsp = {m: family([compare(series(FINAL, lv), series(m, lv)) for lv in LV]) for m in (SA, RBA, NTK)}   # each PINN minus the PHM
+check("ours_better_than_pinns_every_volume", all(r["diff"] > 0 and r["p_adj"] < 0.05 for m in vsp for r in vsp[m]))
 # values for the summarized Results text
 _m3 = DATA[SC].abs().max(axis=1) <= 0.03 + 1e-9
 put("gap_shift_03", "%.1f" % (GAP0 - DATA.Eg_eV[_m3].min())); check("gap_shift_03_above_1eV", GAP0 - DATA.Eg_eV[_m3].min() > 1.0)
@@ -530,7 +535,7 @@ put("abl_copies_max", "%.1f" % max(cp[lv]["diff"] for lv in _cs))
 register("stat_abl_copies_45", "MAE, the PHM without vs with the copied symmetry labels, 5% labeled", cp[5], "meV")
 check("copies_never_better", not sig("drop_copies", worse=False))
 check("copies_sig_contiguous", _cs == [lv for lv in LV if min(_cs) <= lv <= max(_cs)])
-r = ABL[("drop_copies", "axis")][5]; put("abl_copies_axis_45", "%.1f" % r["diff"]); register("stat_abl_copies_axis_45", "axis-relabelling drift, the PHM without vs with the copied symmetry labels, 5% labeled", r, "meV")
+r = ABL[("drop_copies", "axis")][5]; put("abl_copies_axis_45", "%.1f" % r["diff"]); register("stat_abl_copies_axis_45", "axis-relabeling drift, the PHM without vs with the copied symmetry labels, 5% labeled", r, "meV")
 put("axis_nocopies_45", "%.1f" % (mean(FINAL, 5, "axis") + r["diff"]))
 # symmetry term added: no accuracy gain; lower symmetry drift
 sy = ABL[("add_sym", "MAE_meV")]
@@ -539,7 +544,7 @@ put("abl_addsym_896", "%.1f" % sy[100]["diff"]); register("stat_abl_addsym_896",
 check("addsym_never_better", not sig("add_sym", worse=False))
 for lv in (5, 100):
     r = ABL[("add_sym", "axis")][lv]; put("abl_addsym_axis_%d" % NL[lv], "%.1f" % -r["diff"]); put("axis_addsym_%d" % NL[lv], "%.1f" % r["mean_b"])
-register("stat_abl_addsym_axis_45", "axis-relabelling drift, the PHM with vs without the symmetry term, 5% labeled", ABL[("add_sym", "axis")][5], "meV", 1, sign=-1)
+register("stat_abl_addsym_axis_45", "axis-relabeling drift, the PHM with vs without the symmetry term, 5% labeled", ABL[("add_sym", "axis")][5], "meV", 1, sign=-1)
 check("addsym_lowers_axis", all(ABL[("add_sym", "axis")][lv]["diff"] < 0 and ABL[("add_sym", "axis")][lv]["p_adj"] < 0.05 for lv in (5, 100)))
 # band-edge level anchor added: no effect on any metric at any fraction
 an_sig = [(c, lv) for c in KM for lv, r in ABL[("add_anchor", c)].items() if r["p_adj"] < 0.05]; RAW["anchor_significant"] = an_sig

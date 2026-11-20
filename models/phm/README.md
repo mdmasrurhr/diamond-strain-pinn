@@ -25,7 +25,7 @@ It is the first version (res_const_symlab_bal) plus two changes adopted by the a
 
 The loss has three terms: data (with copied symmetry labels), isotropic gaps and gap agreement with θ₀. Two more terms, a symmetry loss and a band-edge level anchor, were removed on 8 Nov 2026 after the 17-seed ablations in the trainer (key `phm_new`). Without the symmetry loss the test gap error fell by 1.9 meV at 50% and 100% labels. The anchor changed nothing. The trainer key of this model is `phm2`.
 
-The evidence is in `10_independent_check/phm_screen/comparison/decisions.txt` and in `04_plans/CHANGE_LOG.md`.
+Each change was adopted by a rule fixed before the screening runs; `phm_ablations.py` reproduces the screen.
 
 ## Commands
 ```

@@ -1,6 +1,6 @@
-# Physics-informed neural networks for strain-dependent bandgaps in diamond
+# A physics-informed neural network for strain-dependent bandgaps in diamond
 
-Code and data for the paper *Physics-informed neural networks for strain-dependent bandgaps in diamond*
+Code and data for the paper *A physics-informed neural network for strain-dependent bandgaps in diamond*
 (M. M. H. Rakin, N. Rabelo Martins, L. M. Scolfaro, R. Shadman, A. Haque, A. Dutta, A. Bora and D. Valles;
 manuscript submitted to *Communications Materials*).
 
@@ -87,7 +87,7 @@ within max(2 meV, 5%).
     python analysis/make_tables.py     # outputs/tables/: every table and numbers_v3.json with every value quoted in the text
     python analysis/make_figures.py    # outputs/figures/: Figures 2-5 and Supplementary Figures 1-6
 
-`make_tables.py` also evaluates the 67 claims the text makes (all pass) and runs every statistical test of the paper
+`make_tables.py` also evaluates the 70 claims the text makes (all pass) and runs every statistical test of the paper
 (Supplementary Table 7).
 
 ## Repeat the whole study

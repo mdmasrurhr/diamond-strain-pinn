@@ -9,7 +9,7 @@ analytic models with constants theta0 fitted to the training states.
 
 Name: PHM (since 8 Nov 2026; formerly r15_phm). The earlier 13-output physics-head model is now called "PHM old".
 Final model (8 Nov 2026): the first version (res_const_symlab_bal) plus two changes its ablation screen adopted
-(phm_ablations.py; results in 10_independent_check/phm_screen/comparison/decisions.txt):
+(phm_ablations.py runs the screen; each change was adopted by a rule fixed before the runs):
   - bounded constants: theta = theta0 + step * tanh(u), so a constant moves at most one step (25%)
   - a 200-iteration learning-rate warm-up after the switch to SOAP
 Loss: data (with copied symmetry labels), isotropic gaps, gap agreement with theta0. The symmetry loss and the band-edge
