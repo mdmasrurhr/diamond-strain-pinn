@@ -1,4 +1,4 @@
-# Settings of PHM (read by phm.py and phm_display_items.py).
+# Settings of PHM (read by phm.py).
 # Another file can be used with:  PHM_CONFIG=other.toml python phm.py ...
 # Every run saves a copy of the settings it used (config_used.toml in its run folder).
 
@@ -12,8 +12,8 @@ strain_columns = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]   # Green-Lagr
 strain_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]
 test_share = 0.20                 # share of each strain class that goes to the test set
 validation_share = 0.10           # share of each strain class that goes to the validation set
-symmetry_decimals = 5             # rounding used to recognise two states as cubic images of each other
-image_decimals = 7                # rounding used to recognise repeated images of one labeled state
+symmetry_decimals = 5             # rounding used to recognize two states as cubic images of each other
+image_decimals = 7                # rounding used to recognize repeated images of one labeled state
 label_seed_offset = 9999          # random stream of the labeled subset: seed + this
 copy_seed_offset = 4241           # random stream of the copied-label subsample: seed + this
 max_copied_labels = 2000          # at most this many copied symmetry images are used
@@ -87,9 +87,3 @@ AV2 = 13.090080116642534
 B_BP = -7.177161522873087
 B2_BP = 70.41960340594974
 D_BP = -1.9671238909825762e-07
-
-[display]                         # used by phm_display_items.py
-figure_dpi = 300
-show_fractions = [0, 1, 5, 25, 100]   # fractions drawn in the per-fraction figures
-two_fractions = [1, 100]              # fractions drawn in the detailed figures
-rolling_points = 5                    # rolling median over this many log rows (= 50 iterations)

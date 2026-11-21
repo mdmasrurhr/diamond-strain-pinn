@@ -2,7 +2,7 @@
 
 1,292 distinct deformation states of diamond (two-atom primitive cell), one row each, with the strain tensor and the
 band edges from hybrid-functional DFT. Repeated calculations of the same state in the original set of 1,340 calculations
-were merged. SHA-256: `44dacb84df6a4924f236f1d42863e9b328957dd8adbc50e453c51d44eae0ac8c` (checked by `check_env.py`).
+were merged. SHA-256: `44dacb84df6a4924f236f1d42863e9b328957dd8adbc50e453c51d44eae0ac8c` (checked by `training/check_env.py`).
 How the calculations were made: `dft/README.md` and the Methods of the paper.
 
 | Family (`strain_type`) | States |
@@ -18,7 +18,7 @@ How the calculations were made: `dft/README.md` and the Methods of the paper.
 | Column | Meaning |
 |---|---|
 | `E_xx`, `E_yy`, `E_zz`, `E_xy`, `E_yz`, `E_zx` | Green–Lagrange strain tensor E = ½(FᵀF − I), relative to the PBE-relaxed unstrained cell (the model inputs) |
-| `CBM_eV`, `VBM_eV` | conduction-band minimum and valence-band maximum (eV): the lowest unoccupied and highest occupied eigenvalues on the Γ-centred 7×7×7 k-point grid |
+| `CBM_eV`, `VBM_eV` | conduction-band minimum and valence-band maximum (eV): the lowest unoccupied and highest occupied eigenvalues on the Γ-centered 7×7×7 k-point grid |
 | `Eg_eV` | bandgap, `CBM_eV − VBM_eV` (eV) |
 | `strain_type` | deformation family (above); the data division keeps the proportions within each family |
 | `vbm_kpt_index`, `cbm_kpt_index` | index of the k-point that holds each band edge (0 = Γ) |

@@ -1,12 +1,12 @@
-"""Data access for the paper's numbers and figures.
+"""Data access for the numbers, tables and figures of the paper (make_tables.py and make_figures.py).
 
-Used by v3_numbers.py and v3_figures.py (in the code repository: analysis/make_tables.py and analysis/make_figures.py).
 Two sources give the same values:
-  raw      the campaign's run folders and files (the authors' machine, about 18 GB)
-  summary  the condensed files in summary/ of the code repository, written from the raw source by export_summary()
+  raw      the run folders of the paper (about 6 GB), the VASP outputs and the preliminary studies
+  summary  the condensed files in summary/, written from the raw source by export_summary()
 configure() selects the source. Every function returns the same values from both sources, except the mean learning
-curves of the figures, which the summary keeps at every 10th iteration.
+curves, which the summary keeps at every 10th iteration.
 Run folders are named relative to the results folder, for example B_main/phm2/5pct/seed42."""
+
 import glob
 import json
 import os
@@ -18,31 +18,44 @@ import numpy as np
 import pandas as pd
 
 PAPER_MODELS = ["phm2", "res_symlab_bal", "sa_pinn", "rba_pinn", "ntk_pinn", "aphynity", "mlp"]
-ABLATION_FOLDERS = ["phm2_drop_agreement", "phm2_drop_iso_eg", "phm2_drop_copies", "phm_new_drop_anchor", "phm_new_drop_sym"]
+ABLATION_FOLDERS = [
+    "phm2_drop_agreement",
+    "phm2_drop_iso_eg",
+    "phm2_drop_copies",
+    "phm_new_drop_anchor",
+    "phm_new_drop_sym",
+]
 LABELMATCHED_MODELS = ["phm2", "res_symlab_bal"]
-GRADIENT_MODELS = ["sa_pinn", "rba_pinn", "phm2", "res_symlab_bal"]       # at 1, 5, 25 and 100% labeled
+GRADIENT_MODELS = ["sa_pinn", "rba_pinn", "phm2", "res_symlab_bal"]  # at 1, 5, 25 and 100% labeled
 CURVE_MODELS = ["sa_pinn", "rba_pinn", "mlp", "phm2"]
 HELDOUT_SUITE_MODELS = ["formula", "sa_pinn", "rba_pinn", "ntk_pinn", "aphynity", "mlp"]
 SEEDS = list(range(42, 59))
-PRELIMINARY = {"capacity_decision": "11_arch", "elements_decision": "11_arch", "optimizer_decision": "12_optim",
-               "epoch_decision": "13_budget", "patience_decision": "13_budget", "split_decision": "10_split"}
+PRELIMINARY = {
+    "capacity_decision": "11_arch",
+    "elements_decision": "11_arch",
+    "optimizer_decision": "12_optim",
+    "epoch_decision": "13_budget",
+    "patience_decision": "13_budget",
+    "split_decision": "10_split",
+}
 CFG = {}
 
 
-def configure(mode, master=None, repo=None):
-    """mode 'raw': master = the DiamondPINN_MASTER folder; mode 'summary': repo = the code repository."""
-    CFG.clear()
-    CFG["mode"] = mode
-    if mode == "raw":
-        CFG["code"] = os.path.join(master, "06_cluster_bundle_leap2")
-        CFG["results"] = os.path.join(master, "07_results", "leap2_campaign_v3")
-        CFG["dft"] = os.path.join(master, "08_dft_raw_outputs")
-        CFG["preliminary"] = os.path.join(master, "07_results", "preliminary_studies")
-    elif mode == "summary":
-        CFG["code"] = repo
-        CFG["summary"] = os.path.join(repo, "summary")
-    else:
+def configure(mode, repo, results=None, dft=None, preliminary=None):
+    """repo: the code repository. mode 'summary' reads its summary/; mode 'raw' reads the run folders (results), the
+    VASP outputs (dft) and the preliminary studies (preliminary)."""
+    if mode not in ("raw", "summary"):
         raise ValueError(mode)
+    CFG.clear()
+    CFG.update(
+        mode=mode,
+        code=os.path.join(repo, "training"),
+        data=os.path.join(repo, "data", "dft_hy_v9.csv"),
+        summary=os.path.join(repo, "summary"),
+        results=results,
+        dft=dft,
+        preliminary=preliminary,
+    )
     if CFG["code"] not in sys.path:
         sys.path.insert(0, CFG["code"])
 
@@ -60,22 +73,21 @@ def _read(path):
     return pd.read_csv(path, float_precision="round_trip")
 
 
-def code_root():
-    return CFG["code"]
+def trainer_file():
+    return os.path.join(CFG["code"], "train.py")
 
 
 def data_csv():
-    return os.path.join(CFG["code"], "data", "dft_hy_v9.csv")
+    return CFG["data"]
 
 
 def constants_file(kind, seed, fraction=None):
     """kind 2band: the paper's constants; linear: the one-band shear term; labelmatched: fitted on labeled states."""
     if kind == "2band":
-        return os.path.join(CFG["code"], "results", "98_constants_2band", "symmetry", "const_seed%d.json" % seed)
+        return os.path.join(CFG["code"], "constants", "two_band", "symmetry", "const_seed%d.json" % seed)
     if kind == "linear":
-        return os.path.join(CFG["code"], "results", "98_constants_v2", "symmetry", "const_seed%d.json" % seed)
-    return os.path.join(CFG["code"], "results", "100_constants_labelmatched_2band", "%dpct" % fraction,
-                        "const_seed%d.json" % seed)
+        return os.path.join(CFG["code"], "constants", "one_band", "symmetry", "const_seed%d.json" % seed)
+    return os.path.join(CFG["code"], "constants", "labelmatched", "%dpct" % fraction, "const_seed%d.json" % seed)
 
 
 # ---------------------------------------------------------------------------------------------------- run metrics
@@ -90,7 +102,7 @@ def _run_folders(kind):
     for folder in folders:
         runs += sorted(glob.glob(os.path.join(CFG["results"], folder, "*pct", "seed*")))
     if kind != "ablation":
-        runs = sorted(runs)          # one alphabetical list, as the campaign's analysis read them
+        runs = sorted(runs)  # one alphabetical list
     return runs
 
 
@@ -99,7 +111,7 @@ def runs(kind, metrics):
     predictions, plus run, model, level, seed, n_labeled, train_mae and best_epoch."""
     if not raw():
         t = _read(summary_file("runs_%s.csv" % kind))
-        t["best_epoch"] = t.best_epoch.astype(float)          # a float in the raw source (NaN where missing)
+        t["best_epoch"] = t.best_epoch.astype(float)  # a float in the raw source (NaN where missing)
         return t
     rows = []
     for d in _run_folders(kind):
@@ -108,21 +120,33 @@ def runs(kind, metrics):
         s = pd.read_csv(d + "/metrics_summary.csv").iloc[0]
         parts = d.split("/")
         r = metrics(pd.read_csv(d + "/test_results.csv"))
-        r.update(run=os.path.relpath(d, CFG["results"]), model=parts[-3], level=int(parts[-2][:-3]), seed=int(parts[-1][4:]),
-                 n_labeled=int(s.n_labeled), train_mae=float(s.train_mae_meV), best_epoch=float(s.get("best_ckpt_epoch", np.nan)))
+        r.update(
+            run=os.path.relpath(d, CFG["results"]),
+            model=parts[-3],
+            level=int(parts[-2][:-3]),
+            seed=int(parts[-1][4:]),
+            n_labeled=int(s.n_labeled),
+            train_mae=float(s.train_mae_meV),
+            best_epoch=float(s.get("best_ckpt_epoch", np.nan)),
+        )
         rows.append(r)
     return pd.DataFrame(rows)
 
 
 def diagnostics():
-    """Physical-validity diagnostics of every run (diag_run.py), one row per run, run relative to the results folder."""
+    """Physical-consistency diagnostics of every run (diag_run.py), one row per run, relative to the results folder."""
     if not raw():
         return _read(summary_file("diagnostics.csv"))
-    frames = []
-    for name in ("diagnostics.jsonl", "diagnostics_res_symlab_bal.jsonl", "diagnostics_phm2.jsonl", "diagnostics_phm_new.jsonl"):
-        frames.append(pd.DataFrame([json.loads(line) for line in open(os.path.join(CFG["results"], name))]))
+    names = (
+        "diagnostics.jsonl",
+        "diagnostics_res_symlab_bal.jsonl",
+        "diagnostics_phm2.jsonl",
+        "diagnostics_phm_new.jsonl",
+    )
+    paths = [os.path.join(CFG["results"], n) for n in names if os.path.exists(os.path.join(CFG["results"], n))]
+    frames = [pd.DataFrame([json.loads(line) for line in open(path)]) for path in paths]
     d = pd.concat(frames)
-    d["run"] = d.run.map(lambda q: q[q.index("/B_") + 1:])
+    d["run"] = d.run.map(lambda q: q[q.index("/B_") + 1 :])
     d = d.drop_duplicates("run", keep="last")
     keep = set(os.path.relpath(r, CFG["results"]) for kind in ("main", "ablation") for r in _run_folders(kind))
     return d[d.run.isin(keep)].reset_index(drop=True)
@@ -152,11 +176,20 @@ def state_errors(models, fraction):
         return t[t.model.isin(models) & (t.level == fraction)].reset_index(drop=True)
     rows = []
     for m in models:
-        for f in sorted(glob.glob(os.path.join(CFG["results"], "B_main", m, "%dpct" % fraction, "seed*", "test_results.csv"))):
+        for f in sorted(
+            glob.glob(os.path.join(CFG["results"], "B_main", m, "%dpct" % fraction, "seed*", "test_results.csv"))
+        ):
             t = pd.read_csv(f)
             for i, e in zip(t.sample_id.values, (t.Eg_pred_eV - t.Eg_true_eV).abs().values * 1000):
-                rows.append({"model": m, "level": fraction, "seed": int(f.split("seed")[-1].split("/")[0]), "sample_id": int(i),
-                             "error_meV": e})
+                rows.append(
+                    {
+                        "model": m,
+                        "level": fraction,
+                        "seed": int(f.split("seed")[-1].split("/")[0]),
+                        "sample_id": int(i),
+                        "error_meV": e,
+                    }
+                )
     return pd.DataFrame(rows)
 
 
@@ -178,7 +211,9 @@ def checkpoint_floor(model, fraction):
         best = pd.to_numeric(log.val_best_eV, errors="coerce").ffill() * 1000
         epoch = pd.read_csv(d + "/metrics_summary.csv").best_ckpt_epoch.iloc[0]
         train = pd.to_numeric(log.train_mae_eV, errors="coerce").iloc[(log.epoch - epoch).abs().argmin()] * 1000
-        rows.append({"model": model, "level": fraction, "seed": int(d.split("seed")[-1]), "best": best.iloc[-1], "train": train})
+        rows.append(
+            {"model": model, "level": fraction, "seed": int(d.split("seed")[-1]), "best": best.iloc[-1], "train": train}
+        )
     return pd.DataFrame(rows)
 
 
@@ -210,8 +245,15 @@ def gradients_at_checkpoint():
             g = pd.read_csv(d + "/grad_probe.csv")
             epoch = pd.read_csv(d + "/metrics_summary.csv").best_ckpt_epoch.iloc[0]
             row = g.iloc[(g.epoch - epoch).abs().argmin()]
-            rows.append({"model": m, "level": p, "seed": int(d.split("seed")[-1]), "cos": row.cos,
-                         "ratio": row.grad_phys_norm / row.grad_data_norm})
+            rows.append(
+                {
+                    "model": m,
+                    "level": p,
+                    "seed": int(d.split("seed")[-1]),
+                    "cos": row.cos,
+                    "ratio": row.grad_phys_norm / row.grad_data_norm,
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -222,7 +264,9 @@ def gradient_trajectory(model, fraction):
         t = t[(t.model == model) & (t.level == fraction)]
         return t.epoch.values, t.ratio.values, t.cos.values
     rs, cs = [], []
-    for f in sorted(glob.glob(os.path.join(CFG["results"], "B_main", model, "%dpct" % fraction, "seed*", "grad_probe.csv"))):
+    for f in sorted(
+        glob.glob(os.path.join(CFG["results"], "B_main", model, "%dpct" % fraction, "seed*", "grad_probe.csv"))
+    ):
         g = pd.read_csv(f)
         g = g[g.epoch >= 250]
         rs.append((g.grad_phys_norm / g.grad_data_norm).values)
@@ -239,7 +283,9 @@ def validation_floor_curve(model, fraction):
         t = t[(t.model == model) & (t.level == fraction) & t.val_best_all.notna()]
         return t.epoch.values, t.val_best_all.values
     curves = []
-    for path in sorted(glob.glob(os.path.join(CFG["results"], "B_main", model, "%dpct" % fraction, "seed*", "epoch_log.csv"))):
+    for path in sorted(
+        glob.glob(os.path.join(CFG["results"], "B_main", model, "%dpct" % fraction, "seed*", "epoch_log.csv"))
+    ):
         log = pd.read_csv(path)
         curves.append(pd.to_numeric(log.val_best_eV, errors="coerce").ffill().values * 1000)
     n = min(len(c) for c in curves)
@@ -262,9 +308,14 @@ def training_curves(model, fraction):
     n = min(len(x) for x in tr_)
     with np.errstate(all="ignore"):
         import warnings
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            return log.epoch.values[:n], np.nanmean([x[:n] for x in tr_], axis=0), np.nanmean([x[:n] for x in va_], axis=0)
+            return (
+                log.epoch.values[:n],
+                np.nanmean([x[:n] for x in tr_], axis=0),
+                np.nanmean([x[:n] for x in va_], axis=0),
+            )
 
 
 def run_minutes(model):
@@ -274,8 +325,10 @@ def run_minutes(model):
         return list(t[t.model == model].minutes.values)
     out = []
     for d in sorted(glob.glob(os.path.join(CFG["results"], "B_main", model, "*pct", "seed*"))):
-        w = re.search(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): ([0-9:.]+)", open(d + "/resources.txt").read()).group(1)
-        out.append(sum(float(x) * 60 ** i for i, x in enumerate(reversed(w.split(":")))) / 60)
+        w = re.search(
+            r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\): ([0-9:.]+)", open(d + "/resources.txt").read()
+        ).group(1)
+        out.append(sum(float(x) * 60**i for i, x in enumerate(reversed(w.split(":")))) / 60)
     return out
 
 
@@ -297,9 +350,16 @@ def heldout_runs(model):
     for d in sorted(glob.glob(os.path.join(CFG["results"], "B_extrap", model, "*", "seed*"))):
         t = pd.read_csv(d + "/test_results.csv")
         y, e = t.Eg_true_eV.values, t.Eg_pred_eV.values
-        rows.append({"model": model, "level": d.split("/")[-2], "seed": int(d.split("/")[-1][4:]),
-                     "MAE_meV": 1000 * np.abs(e - y).mean(), "R2": 1 - ((e - y) ** 2).sum() / ((y - y.mean()) ** 2).sum(),
-                     "max_meV": 1000 * np.abs(e - y).max()})
+        rows.append(
+            {
+                "model": model,
+                "level": d.split("/")[-2],
+                "seed": int(d.split("/")[-1][4:]),
+                "MAE_meV": 1000 * np.abs(e - y).mean(),
+                "R2": 1 - ((e - y) ** 2).sum() / ((y - y.mean()) ** 2).sum(),
+                "max_meV": 1000 * np.abs(e - y).max(),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -358,7 +418,7 @@ def gamma_x_bands():
     poscar = open(os.path.join(path, "POSCAR")).read().split("\n")
     A_ = np.array([[float(x) for x in l.split()[:3]] for l in poscar[2:5]]) * float(poscar[1])
     B_ = np.linalg.inv(A_).T
-    X_ = 1.0 / (np.sqrt(2) * np.linalg.norm(A_[0]))          # |Gamma-X| = 1/a without the 2 pi
+    X_ = 1.0 / (np.sqrt(2) * np.linalg.norm(A_[0]))  # |Gamma-X| = 1/a without the 2 pi
     i, out = 7, []
     axes = [A_[1] + A_[2] - A_[0], A_[0] + A_[2] - A_[1], A_[0] + A_[1] - A_[2]]
     for _ in range(nk):

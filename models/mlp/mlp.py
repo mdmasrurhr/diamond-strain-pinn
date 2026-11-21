@@ -7,7 +7,7 @@ and the valence-band maximum VBM; gap = CBM - VBM. No physics enters: the networ
 isotropic training states (whose gaps every run sees). It is the data-only baseline of the paper.
 Loss (absolute errors): data (CBM and VBM of the labeled states) and isotropic gaps.
 
-Name in the paper: "MLP". Campaign key: mlp (03_train_pinn.py --model mlp --no_rba). This file reproduces those runs
+Name in the paper: "MLP". Results folder of the paper's runs: mlp (training/train.py --model mlp --no_rba). This file reproduces those runs
 exactly (checked iteration by iteration).
 
 Experiments (--experiment):
@@ -53,7 +53,7 @@ from sklearn.preprocessing import StandardScaler
 #   heldout_schemes()                              names of the held-out divisions
 #   load_and_split(data_csv, seed, fraction, scheme)   division, input scaling, labeled subset
 # Optimizer
-#   class SOAP                                     the SOAP optimizer (exact copy of the project's soap.py)
+#   class SOAP                                     the SOAP optimizer (copy of training/soap.py)
 #   make_soap(parameters)                          SOAP with the settings of training phase 2
 # Network
 #   class MLP                                      the network
@@ -67,6 +67,7 @@ from sklearn.preprocessing import StandardScaler
 #   run_folder(...), settings_of(...), run_arguments(...), write_task_list(...), run_study_locally(...)
 # Command line
 #   parse_int_list(text), main()
+
 
 # ======================================================================================================================
 # SETTINGS (all in config.toml)
@@ -88,11 +89,12 @@ def cubic_point_group():
 
 
 MODEL_NAME = "mlp"
-EXPERIMENT_NAMES = ["main", "heldout"]                     # experiments this model runs (see the top of the file)
+EXPERIMENT_NAMES = ["main", "heldout"]  # experiments this model runs (see the top of the file)
 # the settings file: config.toml next to this file, or another one given with MLP_CONFIG=<path>
 CONFIG_FILE = os.environ.get("MLP_CONFIG", os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml"))
-STUDY, DATA, EXPERIMENTS, NETWORK, TRAINING, LOSS = read_config(CONFIG_FILE, "study", "data", "experiments", "network",
-                                                               "training", "loss")
+STUDY, DATA, EXPERIMENTS, NETWORK, TRAINING, LOSS = read_config(
+    CONFIG_FILE, "study", "data", "experiments", "network", "training", "loss"
+)
 CUBIC_OPERATIONS = cubic_point_group()
 
 
@@ -108,14 +110,14 @@ def strain_class_of(name):
         return "biaxial"
     if name in ("isotropic", "triaxial", "shear"):
         return name
-    return "isotropic"                      # the unstrained state counts as isotropic
+    return "isotropic"  # the unstrained state counts as isotropic
 
 
 def cubic_images(strain):
     """The 48 images R e R^T of one strain state under the cubic operations (Voigt order)."""
-    T = np.array([[strain[0], strain[3], strain[5]],
-                  [strain[3], strain[1], strain[4]],
-                  [strain[5], strain[4], strain[2]]])
+    T = np.array(
+        [[strain[0], strain[3], strain[5]], [strain[3], strain[1], strain[4]], [strain[5], strain[4], strain[2]]]
+    )
     images = []
     for R in CUBIC_OPERATIONS:
         Tr = R @ T @ R.T
@@ -149,7 +151,10 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
         key_to_id = {}
         symmetry_class = np.zeros(n_states, dtype=int)
         for i in range(n_states):
-            keys = [tuple(np.round(image, DATA["symmetry_decimals"])) for image in cubic_images(strain[i].astype(np.float64))]
+            keys = [
+                tuple(np.round(image, DATA["symmetry_decimals"]))
+                for image in cubic_images(strain[i].astype(np.float64))
+            ]
             key = min(keys)
             if key not in key_to_id:
                 key_to_id[key] = len(key_to_id)
@@ -183,19 +188,21 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
         index_test = np.array(sorted(test_list))
     elif scheme.startswith("group_"):
         # one strain class is the test set; the rest is divided into training and validation, stratified by class
-        left_out = scheme[len("group_"):]
+        left_out = scheme[len("group_") :]
         index_test = all_index[classes == left_out]
         pool = all_index[classes != left_out]
-        index_train, index_val = train_test_split(pool, test_size=EXPERIMENTS["heldout_validation_share"],
-                                                  random_state=seed, stratify=classes[pool])
+        index_train, index_val = train_test_split(
+            pool, test_size=EXPERIMENTS["heldout_validation_share"], random_state=seed, stratify=classes[pool]
+        )
     elif scheme.startswith("magnitude_"):
         # every state whose largest strain component exceeds the threshold is the test set
-        threshold = int(scheme[len("magnitude_"):]) / 100
+        threshold = int(scheme[len("magnitude_") :]) / 100
         size = np.max(np.abs(strain), axis=1)
         index_test = all_index[size > threshold]
         pool = all_index[size <= threshold]
-        index_train, index_val = train_test_split(pool, test_size=EXPERIMENTS["heldout_validation_share"],
-                                                  random_state=seed)
+        index_train, index_val = train_test_split(
+            pool, test_size=EXPERIMENTS["heldout_validation_share"], random_state=seed
+        )
     else:
         raise SystemExit("unknown held-out scheme %s (known: %s)" % (scheme, ", ".join(heldout_schemes())))
 
@@ -223,17 +230,33 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
     split[index_val] = "val"
     split[index_test] = "test"
 
-    return {"table": table, "strain": strain, "classes": classes, "split": split, "scaler": scaler,
-            "index_train": index_train, "index_val": index_val, "index_test": index_test, "labeled": labeled,
-            "x_train": x_train, "x_val": x_val, "x_test": x_test,
-            "strain_train": strain[index_train], "gap_train": gap[index_train],
-            "cbm_train": cbm[index_train], "vbm_train": vbm[index_train],
-            "gap_val": gap[index_val], "gap_test": gap[index_test],
-            "gap": gap, "cbm": cbm, "vbm": vbm}
+    return {
+        "table": table,
+        "strain": strain,
+        "classes": classes,
+        "split": split,
+        "scaler": scaler,
+        "index_train": index_train,
+        "index_val": index_val,
+        "index_test": index_test,
+        "labeled": labeled,
+        "x_train": x_train,
+        "x_val": x_val,
+        "x_test": x_test,
+        "strain_train": strain[index_train],
+        "gap_train": gap[index_train],
+        "cbm_train": cbm[index_train],
+        "vbm_train": vbm[index_train],
+        "gap_val": gap[index_val],
+        "gap_test": gap[index_test],
+        "gap": gap,
+        "cbm": cbm,
+        "vbm": vbm,
+    }
 
 
 # ======================================================================================================================
-# OPTIMIZER: SOAP (exact copy of the project's soap.py; https://arxiv.org/abs/2409.11321; parts adapted from
+# OPTIMIZER: SOAP (copy of training/soap.py; https://arxiv.org/abs/2409.11321; parts adapted from
 # PyTorch's AdamW and from GaLore's projector). Adam run in the eigenbasis of Shampoo's preconditioner.
 # ======================================================================================================================
 class SOAP(optim.Optimizer):
@@ -247,18 +270,40 @@ class SOAP(optim.Optimizer):
     max_precond_dim         largest preconditioned dimension
     merge_dims              merge dimensions until their product is <= max_precond_dim
     precondition_1d         also precondition 1-D parameters (biases)
-    normalize_grads         normalise the update of each layer
+    normalize_grads         normalize the update of each layer
     data_format             'channels_first' or 'channels_last' (for 4-D tensors)
     correct_bias            Adam's bias correction
     """
 
-    def __init__(self, params, lr=3e-3, betas=(0.95, 0.95), shampoo_beta=-1, eps=1e-8, weight_decay=0.01,
-                 precondition_frequency=10, max_precond_dim=10000, merge_dims=False, precondition_1d=False,
-                 normalize_grads=False, data_format="channels_first", correct_bias=True):
-        defaults = {"lr": lr, "betas": betas, "shampoo_beta": shampoo_beta, "eps": eps, "weight_decay": weight_decay,
-                    "precondition_frequency": precondition_frequency, "max_precond_dim": max_precond_dim,
-                    "merge_dims": merge_dims, "precondition_1d": precondition_1d, "normalize_grads": normalize_grads,
-                    "correct_bias": correct_bias}
+    def __init__(
+        self,
+        params,
+        lr=3e-3,
+        betas=(0.95, 0.95),
+        shampoo_beta=-1,
+        eps=1e-8,
+        weight_decay=0.01,
+        precondition_frequency=10,
+        max_precond_dim=10000,
+        merge_dims=False,
+        precondition_1d=False,
+        normalize_grads=False,
+        data_format="channels_first",
+        correct_bias=True,
+    ):
+        defaults = {
+            "lr": lr,
+            "betas": betas,
+            "shampoo_beta": shampoo_beta,
+            "eps": eps,
+            "weight_decay": weight_decay,
+            "precondition_frequency": precondition_frequency,
+            "max_precond_dim": max_precond_dim,
+            "merge_dims": merge_dims,
+            "precondition_1d": precondition_1d,
+            "normalize_grads": normalize_grads,
+            "correct_bias": correct_bias,
+        }
         super().__init__(params, defaults)
         self._data_format = data_format
 
@@ -302,21 +347,31 @@ class SOAP(optim.Optimizer):
                 if "step" not in state:
                     state["step"] = 0
                 if "exp_avg" not in state:
-                    state["exp_avg"] = torch.zeros_like(grad)          # moving average of the gradient
-                    state["exp_avg_sq"] = torch.zeros_like(grad)       # moving average of the squared gradient
+                    state["exp_avg"] = torch.zeros_like(grad)  # moving average of the gradient
+                    state["exp_avg_sq"] = torch.zeros_like(grad)  # moving average of the squared gradient
                 if "Q" not in state:
-                    self.init_preconditioner(grad, state, precondition_frequency=group["precondition_frequency"],
-                                             precondition_1d=group["precondition_1d"],
-                                             shampoo_beta=(group["shampoo_beta"] if group["shampoo_beta"] >= 0
-                                                           else group["betas"][1]),
-                                             max_precond_dim=group["max_precond_dim"], merge_dims=group["merge_dims"])
-                    self.update_preconditioner(grad, state, max_precond_dim=group["max_precond_dim"],
-                                               merge_dims=group["merge_dims"], precondition_1d=group["precondition_1d"])
-                    continue    # first step is skipped so that the current gradient is never used in the projection
+                    self.init_preconditioner(
+                        grad,
+                        state,
+                        precondition_frequency=group["precondition_frequency"],
+                        precondition_1d=group["precondition_1d"],
+                        shampoo_beta=(group["shampoo_beta"] if group["shampoo_beta"] >= 0 else group["betas"][1]),
+                        max_precond_dim=group["max_precond_dim"],
+                        merge_dims=group["merge_dims"],
+                    )
+                    self.update_preconditioner(
+                        grad,
+                        state,
+                        max_precond_dim=group["max_precond_dim"],
+                        merge_dims=group["merge_dims"],
+                        precondition_1d=group["precondition_1d"],
+                    )
+                    continue  # first step is skipped so that the current gradient is never used in the projection
 
                 # project the gradient to the eigenbases of Shampoo's preconditioner
-                grad_projected = self.project(grad, state, merge_dims=group["merge_dims"],
-                                              max_precond_dim=group["max_precond_dim"])
+                grad_projected = self.project(
+                    grad, state, merge_dims=group["merge_dims"], max_precond_dim=group["max_precond_dim"]
+                )
                 exp_avg = state["exp_avg"]
                 exp_avg_sq = state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]
@@ -329,13 +384,17 @@ class SOAP(optim.Optimizer):
                 if group["correct_bias"]:
                     bias_correction1 = 1.0 - beta1 ** (state["step"])
                     bias_correction2 = 1.0 - beta2 ** (state["step"])
-                    step_size = step_size * (bias_correction2 ** .5) / bias_correction1
+                    step_size = step_size * (bias_correction2**0.5) / bias_correction1
 
                 # project the Adam-preconditioned average back to the original space
-                norm_grad = self.project_back(exp_avg_projected / denom, state, merge_dims=group["merge_dims"],
-                                              max_precond_dim=group["max_precond_dim"])
+                norm_grad = self.project_back(
+                    exp_avg_projected / denom,
+                    state,
+                    merge_dims=group["merge_dims"],
+                    max_precond_dim=group["max_precond_dim"],
+                )
                 if group["normalize_grads"]:
-                    norm_grad = norm_grad / (1e-30 + torch.mean(norm_grad ** 2) ** 0.5)
+                    norm_grad = norm_grad / (1e-30 + torch.mean(norm_grad**2) ** 0.5)
                 p.add_(norm_grad, alpha=-step_size)
 
                 # decoupled weight decay, as in AdamW
@@ -343,12 +402,25 @@ class SOAP(optim.Optimizer):
                     p.add_(p, alpha=(-group["lr"] * group["weight_decay"]))
 
                 # update after the step, so the current gradient is not used in the projection
-                self.update_preconditioner(grad, state, max_precond_dim=group["max_precond_dim"],
-                                           merge_dims=group["merge_dims"], precondition_1d=group["precondition_1d"])
+                self.update_preconditioner(
+                    grad,
+                    state,
+                    max_precond_dim=group["max_precond_dim"],
+                    merge_dims=group["merge_dims"],
+                    precondition_1d=group["precondition_1d"],
+                )
         return loss
 
-    def init_preconditioner(self, grad, state, precondition_frequency=10, shampoo_beta=0.95, max_precond_dim=10000,
-                            precondition_1d=False, merge_dims=False):
+    def init_preconditioner(
+        self,
+        grad,
+        state,
+        precondition_frequency=10,
+        shampoo_beta=0.95,
+        max_precond_dim=10000,
+        precondition_1d=False,
+        merge_dims=False,
+    ):
         """Initializes the preconditioner matrices (L and R in the paper)."""
         state["GG"] = []
         if grad.dim() == 1:
@@ -391,8 +463,9 @@ class SOAP(optim.Optimizer):
     def update_preconditioner(self, grad, state, max_precond_dim=10000, merge_dims=False, precondition_1d=False):
         """Updates the preconditioner matrices and the eigenbases (L, R, Q_L, Q_R in the paper)."""
         if state["Q"] is not None:
-            state["exp_avg"] = self.project_back(state["exp_avg"], state, merge_dims=merge_dims,
-                                                 max_precond_dim=max_precond_dim)
+            state["exp_avg"] = self.project_back(
+                state["exp_avg"], state, merge_dims=merge_dims, max_precond_dim=max_precond_dim
+            )
         if grad.dim() == 1:
             if precondition_1d and grad.shape[0] <= max_precond_dim:
                 state["GG"][0].lerp_(grad.unsqueeze(1) @ grad.unsqueeze(0), 1 - state["shampoo_beta"])
@@ -415,8 +488,9 @@ class SOAP(optim.Optimizer):
         if state["step"] > 0 and state["step"] % state["precondition_frequency"] == 0:
             state["Q"] = self.get_orthogonal_matrix_QR(state, max_precond_dim, merge_dims)
         if state["step"] > 0:
-            state["exp_avg"] = self.project(state["exp_avg"], state, merge_dims=merge_dims,
-                                            max_precond_dim=max_precond_dim)
+            state["exp_avg"] = self.project(
+                state["exp_avg"], state, merge_dims=merge_dims, max_precond_dim=max_precond_dim
+            )
 
     def project_back(self, grad, state, merge_dims=False, max_precond_dim=10000):
         """Projects the gradient back to the original space."""
@@ -522,8 +596,13 @@ class SOAP(optim.Optimizer):
 
 def make_soap(parameters):
     """SOAP with the settings of training phase 2."""
-    return SOAP(parameters, lr=TRAINING["soap_lr"], betas=tuple(TRAINING["soap_betas"]), weight_decay=TRAINING["soap_weight_decay"],
-                precondition_frequency=TRAINING["soap_precondition_frequency"])
+    return SOAP(
+        parameters,
+        lr=TRAINING["soap_lr"],
+        betas=tuple(TRAINING["soap_betas"]),
+        weight_decay=TRAINING["soap_weight_decay"],
+        precondition_frequency=TRAINING["soap_precondition_frequency"],
+    )
 
 
 # ======================================================================================================================
@@ -541,7 +620,7 @@ class MLP(nn.Module):
             self.hidden.append(nn.Sequential(nn.Linear(layer_sizes[i], layer_sizes[i + 1]), nn.SiLU()))
         self.out = nn.Linear(NETWORK["neurons"], NETWORK["outputs"])
 
-        # Xavier initialisation (in the same order as the paper's trainer, so the random-number stream is the same)
+        # Xavier initialization (in the same order as training/train.py, so the random-number stream is the same)
         for layer in self.hidden:
             nn.init.xavier_normal_(layer[0].weight)
             nn.init.zeros_(layer[0].bias)
@@ -597,8 +676,9 @@ def compute_loss(model, t):
 
     # 1. data: CBM and VBM of the labeled states
     if t["n_labeled"] > 0:
-        loss_data = LOSS["w_data"] * ((cbm[t["labeled"]] - t["cbm_labeled"]).abs().mean()
-                                      + (vbm[t["labeled"]] - t["vbm_labeled"]).abs().mean())
+        loss_data = LOSS["w_data"] * (
+            (cbm[t["labeled"]] - t["cbm_labeled"]).abs().mean() + (vbm[t["labeled"]] - t["vbm_labeled"]).abs().mean()
+        )
     else:
         loss_data = zero
 
@@ -628,7 +708,7 @@ def train_one_run(data_csv, out, seed, fraction, experiment, scheme, n_iteration
     """Train the MLP for one seed and one setting; write log, predictions and summary to its run folder."""
     folder = run_folder(out, seed, fraction, experiment, scheme)
     os.makedirs(folder, exist_ok=True)
-    shutil.copy(CONFIG_FILE, os.path.join(folder, "config_used.toml"))      # the settings of this run
+    shutil.copy(CONFIG_FILE, os.path.join(folder, "config_used.toml"))  # the settings of this run
     if threads > 0:
         torch.set_num_threads(threads)
     random.seed(seed)
@@ -639,16 +719,31 @@ def train_one_run(data_csv, out, seed, fraction, experiment, scheme, n_iteration
 
     data = load_and_split(data_csv, seed, fraction, scheme)
     t = prepare_tensors(data)
-    print("seed %d, %s %s: %d train, %d validation, %d test, %d labeled"
-          % (seed, experiment, scheme or "%d%%" % fraction, len(data["index_train"]), len(data["index_val"]),
-             len(data["index_test"]), t["n_labeled"]), flush=True)
+    print(
+        "seed %d, %s %s: %d train, %d validation, %d test, %d labeled"
+        % (
+            seed,
+            experiment,
+            scheme or "%d%%" % fraction,
+            len(data["index_train"]),
+            len(data["index_val"]),
+            len(data["index_test"]),
+            t["n_labeled"],
+        ),
+        flush=True,
+    )
 
     model = MLP(float(np.mean(data["cbm_train"])), float(np.mean(data["vbm_train"])))
     switch_iteration = int(round(TRAINING["switch_fraction"] * n_iterations))
-    optimizer = optim.AdamW(model.parameters(), lr=TRAINING["adamw_lr"], weight_decay=TRAINING["adamw_weight_decay"],
-                            betas=tuple(TRAINING["adamw_betas"]))
-    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=TRAINING["restart_period_adamw"],
-                                                               T_mult=TRAINING["restart_growth"], eta_min=TRAINING["lr_min"])
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=TRAINING["adamw_lr"],
+        weight_decay=TRAINING["adamw_weight_decay"],
+        betas=tuple(TRAINING["adamw_betas"]),
+    )
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, T_0=TRAINING["restart_period_adamw"], T_mult=TRAINING["restart_growth"], eta_min=TRAINING["lr_min"]
+    )
     best_val = float("inf")
     best_iteration = 0
     best_state = None
@@ -660,8 +755,12 @@ def train_one_run(data_csv, out, seed, fraction, experiment, scheme, n_iteration
         if iteration == switch_iteration + 1:
             # phase 2: a fresh SOAP optimizer with its own schedule
             optimizer = make_soap(model.parameters())
-            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=TRAINING["restart_period_soap"],
-                                                                       T_mult=TRAINING["restart_growth"], eta_min=TRAINING["lr_min"])
+            scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=TRAINING["restart_period_soap"],
+                T_mult=TRAINING["restart_growth"],
+                eta_min=TRAINING["lr_min"],
+            )
         model.train()
         optimizer.zero_grad()
         loss, terms = compute_loss(model, t)
@@ -695,8 +794,11 @@ def train_one_run(data_csv, out, seed, fraction, experiment, scheme, n_iteration
             row["test_mae"] = gap_mae(model, t["x_test"], t["gap_test"])
             log_rows.append(row)
         if iteration % 2000 == 0:
-            print("  iteration %5d  lr %.2e  loss %.4f  best validation %.1f meV  (%.0f s)"
-                  % (iteration, lr_used, float(loss.detach()), best_val * 1000, time.time() - start_time), flush=True)
+            print(
+                "  iteration %5d  lr %.2e  loss %.4f  best validation %.1f meV  (%.0f s)"
+                % (iteration, lr_used, float(loss.detach()), best_val * 1000, time.time() - start_time),
+                flush=True,
+            )
 
     train_time = time.time() - start_time
     if best_state is not None:
@@ -704,8 +806,20 @@ def train_one_run(data_csv, out, seed, fraction, experiment, scheme, n_iteration
     torch.save(model.state_dict(), os.path.join(folder, "best_model.pt"))
     pd.DataFrame(log_rows).to_csv(os.path.join(folder, "log.csv"), index=False)
     predictions = save_predictions(model, data, folder)
-    save_summary(predictions, seed, fraction, experiment, scheme, t, n_iterations, best_iteration, best_val,
-                 n_clipped, train_time, folder)
+    save_summary(
+        predictions,
+        seed,
+        fraction,
+        experiment,
+        scheme,
+        t,
+        n_iterations,
+        best_iteration,
+        best_val,
+        n_clipped,
+        train_time,
+        folder,
+    )
 
 
 def save_predictions(model, data, folder):
@@ -731,25 +845,34 @@ def save_predictions(model, data, folder):
     return p
 
 
-def save_summary(p, seed, fraction, experiment, scheme, t, n_iterations, best_iteration, best_val, n_clipped,
-                 train_time, folder):
+def save_summary(
+    p, seed, fraction, experiment, scheme, t, n_iterations, best_iteration, best_val, n_clipped, train_time, folder
+):
     """One row of metrics. Written last: its presence marks the run as finished."""
     test = p[p["split"] == "test"]
     train = p[p["split"] == "train"]
     error = (test["gap_pred"] - test["gap_true"]).values
     total_variance = ((test["gap_true"] - test["gap_true"].mean()) ** 2).sum()
-    s = {"model": MODEL_NAME, "experiment": experiment, "scheme": scheme or "", "seed": seed, "fraction": fraction,
-         "n_labeled": t["n_labeled"], "n_iterations": n_iterations, "best_iteration": best_iteration,
-         "test_mae_meV": np.abs(error).mean() * 1000,
-         "test_rmse_meV": np.sqrt((error ** 2).mean()) * 1000,
-         "test_max_meV": np.abs(error).max() * 1000,
-         "test_r2": 1.0 - (error ** 2).sum() / total_variance,
-         "test_cbm_mae_meV": np.abs(test["cbm_pred"] - test["cbm_true"]).mean() * 1000,
-         "test_vbm_mae_meV": np.abs(test["vbm_pred"] - test["vbm_true"]).mean() * 1000,
-         "val_mae_meV": best_val * 1000,
-         "train_mae_meV": np.abs(train["gap_pred"] - train["gap_true"]).mean() * 1000,
-         "clipped_share": n_clipped / n_iterations,
-         "train_time_s": train_time}
+    s = {
+        "model": MODEL_NAME,
+        "experiment": experiment,
+        "scheme": scheme or "",
+        "seed": seed,
+        "fraction": fraction,
+        "n_labeled": t["n_labeled"],
+        "n_iterations": n_iterations,
+        "best_iteration": best_iteration,
+        "test_mae_meV": np.abs(error).mean() * 1000,
+        "test_rmse_meV": np.sqrt((error**2).mean()) * 1000,
+        "test_max_meV": np.abs(error).max() * 1000,
+        "test_r2": 1.0 - (error**2).sum() / total_variance,
+        "test_cbm_mae_meV": np.abs(test["cbm_pred"] - test["cbm_true"]).mean() * 1000,
+        "test_vbm_mae_meV": np.abs(test["vbm_pred"] - test["vbm_true"]).mean() * 1000,
+        "val_mae_meV": best_val * 1000,
+        "train_mae_meV": np.abs(train["gap_pred"] - train["gap_true"]).mean() * 1000,
+        "clipped_share": n_clipped / n_iterations,
+        "train_time_s": train_time,
+    }
     if "gap_analytic" in test.columns:
         s["analytic_test_mae_meV"] = np.abs(test["gap_analytic"] - test["gap_true"]).mean() * 1000
     for class_name in DATA["strain_classes"]:
@@ -757,8 +880,11 @@ def save_summary(p, seed, fraction, experiment, scheme, t, n_iterations, best_it
         if in_class.any():
             s["test_mae_" + class_name + "_meV"] = np.abs(error[in_class]).mean() * 1000
     pd.DataFrame([s]).to_csv(os.path.join(folder, "metrics_summary.csv"), index=False)
-    print("seed %d, %s %s: test gap MAE %.2f meV, best checkpoint at iteration %d, %.0f s"
-          % (seed, experiment, scheme or "%d%%" % fraction, s["test_mae_meV"], best_iteration, train_time), flush=True)
+    print(
+        "seed %d, %s %s: test gap MAE %.2f meV, best checkpoint at iteration %d, %.0f s"
+        % (seed, experiment, scheme or "%d%%" % fraction, s["test_mae_meV"], best_iteration, train_time),
+        flush=True,
+    )
 
 
 # ======================================================================================================================
@@ -781,8 +907,23 @@ def settings_of(experiment, fractions=None):
 
 
 def run_arguments(data_csv, out, seed, fraction, experiment, scheme, n_iterations, threads):
-    arguments = ["run", "--data_csv", data_csv, "--out", out, "--experiment", experiment, "--seed", str(seed),
-                 "--fraction", str(fraction), "--iterations", str(n_iterations), "--threads", str(threads)]
+    arguments = [
+        "run",
+        "--data_csv",
+        data_csv,
+        "--out",
+        out,
+        "--experiment",
+        experiment,
+        "--seed",
+        str(seed),
+        "--fraction",
+        str(fraction),
+        "--iterations",
+        str(n_iterations),
+        "--threads",
+        str(threads),
+    ]
     if scheme is not None:
         arguments += ["--scheme", scheme]
     return arguments
@@ -797,8 +938,10 @@ def write_task_list(script, data_csv, out, seeds, experiment, fractions, n_itera
         for fraction, scheme in settings_of(experiment, fractions):
             for seed in seeds:
                 arguments = run_arguments(data_csv, out, seed, fraction, experiment, scheme, n_iterations, 1)
-                f.write("%s\tpython %s %s\n" % (run_folder(out, seed, fraction, experiment, scheme), script,
-                                               " ".join(arguments)))
+                f.write(
+                    "%s\tpython %s %s\n"
+                    % (run_folder(out, seed, fraction, experiment, scheme), script, " ".join(arguments))
+                )
                 n_runs += 1
     print("wrote %s (%d runs)" % (path, n_runs))
 
@@ -808,7 +951,9 @@ def run_study_locally(data_csv, out, seeds, experiment, fractions, n_iterations,
     todo = []
     for fraction, scheme in settings_of(experiment, fractions):
         for seed in seeds:
-            if not os.path.exists(os.path.join(run_folder(out, seed, fraction, experiment, scheme), "metrics_summary.csv")):
+            if not os.path.exists(
+                os.path.join(run_folder(out, seed, fraction, experiment, scheme), "metrics_summary.csv")
+            ):
                 todo.append((seed, fraction, scheme))
     print("%d runs to do, %d at a time" % (len(todo), jobs), flush=True)
     environment = dict(os.environ)
@@ -821,8 +966,9 @@ def run_study_locally(data_csv, out, seeds, experiment, fractions, n_iterations,
             seed, fraction, scheme = todo.pop(0)
             folder = run_folder(out, seed, fraction, experiment, scheme)
             os.makedirs(folder, exist_ok=True)
-            command = [sys.executable, os.path.abspath(__file__)] + run_arguments(data_csv, out, seed, fraction,
-                                                                                  experiment, scheme, n_iterations, threads)
+            command = [sys.executable, os.path.abspath(__file__)] + run_arguments(
+                data_csv, out, seed, fraction, experiment, scheme, n_iterations, threads
+            )
             output = open(os.path.join(folder, "stdout.txt"), "w")
             process = subprocess.Popen(command, stdout=output, stderr=subprocess.STDOUT, env=environment)
             running.append((process, seed, fraction, scheme))
@@ -832,8 +978,10 @@ def run_study_locally(data_csv, out, seeds, experiment, fractions, n_iterations,
             if process.poll() is None:
                 still_running.append((process, seed, fraction, scheme))
             else:
-                print("  finished seed %d, %s (exit code %d)" % (seed, scheme or "%d%%" % fraction, process.returncode),
-                      flush=True)
+                print(
+                    "  finished seed %d, %s (exit code %d)" % (seed, scheme or "%d%%" % fraction, process.returncode),
+                    flush=True,
+                )
                 if process.returncode != 0:
                     failed.append((seed, fraction, scheme))
         running = still_running
@@ -864,14 +1012,17 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ["run", "study", "tasks"]:
         p = commands.add_parser(name)
-        p.add_argument("--data_csv", required=True,
-                       help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)")
+        p.add_argument(
+            "--data_csv", required=True, help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)"
+        )
         p.add_argument("--out", required=True, help="study folder")
         p.add_argument("--experiment", default="main", choices=EXPERIMENT_NAMES)
         if name == "run":
             p.add_argument("--seed", type=int, required=True)
             p.add_argument("--fraction", type=int, default=100, help="percent of the training states with labels")
-            p.add_argument("--scheme", default=None, help="held-out division (heldout experiment): " + ", ".join(heldout_schemes()))
+            p.add_argument(
+                "--scheme", default=None, help="held-out division (heldout experiment): " + ", ".join(heldout_schemes())
+            )
         else:
             p.add_argument("--seeds", default="%d-%d" % (STUDY["first_seed"], STUDY["last_seed"]))
             p.add_argument("--fractions", default=None, help="labeled fractions (main); default: config.toml")
@@ -888,14 +1039,23 @@ def main():
             raise SystemExit("--experiment heldout needs --scheme")
         if args.experiment == "heldout":
             args.fraction = 100
-        train_one_run(args.data_csv, args.out, args.seed, args.fraction, args.experiment, args.scheme,
-                      args.iterations, args.threads)
+        train_one_run(
+            args.data_csv,
+            args.out,
+            args.seed,
+            args.fraction,
+            args.experiment,
+            args.scheme,
+            args.iterations,
+            args.threads,
+        )
         return
     fractions = parse_int_list(args.fractions) if args.fractions else None
     seeds = parse_int_list(args.seeds)
     if args.command == "study":
-        run_study_locally(args.data_csv, args.out, seeds, args.experiment, fractions, args.iterations, args.jobs,
-                          args.threads)
+        run_study_locally(
+            args.data_csv, args.out, seeds, args.experiment, fractions, args.iterations, args.jobs, args.threads
+        )
     elif args.command == "tasks":
         write_task_list(sys.argv[0], args.data_csv, args.out, seeds, args.experiment, fractions, args.iterations)
 

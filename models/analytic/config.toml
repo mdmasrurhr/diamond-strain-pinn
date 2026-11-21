@@ -10,7 +10,7 @@ strain_columns = ["E_xx", "E_yy", "E_zz", "E_xy", "E_yz", "E_zx"]   # Green-Lagr
 strain_classes = ["isotropic", "uniaxial", "biaxial", "triaxial", "shear"]
 test_share = 0.20                 # share of each strain class that goes to the test set
 validation_share = 0.10           # share of each strain class that goes to the validation set
-symmetry_decimals = 5             # rounding used to recognise two states as cubic images of each other
+symmetry_decimals = 5             # rounding used to recognize two states as cubic images of each other
 label_seed_offset = 9999          # random stream of the labeled subset: seed + this
 isotropic_tolerance = 1e-4        # a state is isotropic when shear and diagonal spread are below this
 

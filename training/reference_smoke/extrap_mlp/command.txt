@@ -1,0 +1,1 @@
+PHYSICS_CONST_JSON=constants/two_band/group_isotropic/const_seed42.json python train.py --data_csv ../data/dft_hy_v9.csv --results_dir results/smoke/extrap_mlp --seed 42 --dft_pct 100 --device cpu --split group --holdout_family isotropic --model mlp --no_rba --epochs 300

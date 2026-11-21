@@ -1,0 +1,1 @@
+PHYSICS_CONST_JSON=constants/two_band/symmetry/const_seed42.json python train.py --data_csv ../data/dft_hy_v9.csv --results_dir results/smoke/main_mlp --seed 42 --dft_pct 25 --device cpu --split symmetry --model mlp --no_rba --grad_probe_every 250 --epochs 300

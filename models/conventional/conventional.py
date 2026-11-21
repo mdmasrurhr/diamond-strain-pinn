@@ -6,7 +6,7 @@ Each method predicts the gap directly from the six standardized strain component
 states, with exactly the division, input scaling and labeled states of the networks (seeds 42-58, labeled fractions
 1-100%; 0% has no labeled state). The Gaussian process was the most accurate of the three at every fraction.
 
-Name in the paper: "Gaussian process", "random forest", "gradient boosting". Campaign script: classical_baselines.py.
+Name in the paper: "Gaussian process", "random forest", "gradient boosting". Paper runs: training/classical_baselines.py.
 This file reproduces its results exactly.
 
 Commands (python conventional.py <command> -h shows the options):
@@ -48,6 +48,7 @@ from sklearn.preprocessing import StandardScaler
 # Command line
 #   parse_int_list(text), main()
 
+
 # ======================================================================================================================
 # SETTINGS (all in config.toml)
 # ======================================================================================================================
@@ -68,9 +69,12 @@ def cubic_point_group():
 
 
 # the settings file: config.toml next to this file, or another one given with CONVENTIONAL_CONFIG=<path>
-CONFIG_FILE = os.environ.get("CONVENTIONAL_CONFIG", os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml"))
-STUDY, DATA, GP, FOREST, BOOSTING = read_config(CONFIG_FILE, "study", "data", "gaussian_process", "random_forest",
-                                                "gradient_boosting")
+CONFIG_FILE = os.environ.get(
+    "CONVENTIONAL_CONFIG", os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml")
+)
+STUDY, DATA, GP, FOREST, BOOSTING = read_config(
+    CONFIG_FILE, "study", "data", "gaussian_process", "random_forest", "gradient_boosting"
+)
 CUBIC_OPERATIONS = cubic_point_group()
 
 
@@ -86,14 +90,14 @@ def strain_class_of(name):
         return "biaxial"
     if name in ("isotropic", "triaxial", "shear"):
         return name
-    return "isotropic"                      # the unstrained state counts as isotropic
+    return "isotropic"  # the unstrained state counts as isotropic
 
 
 def cubic_images(strain):
     """The 48 images R e R^T of one strain state under the cubic operations (Voigt order)."""
-    T = np.array([[strain[0], strain[3], strain[5]],
-                  [strain[3], strain[1], strain[4]],
-                  [strain[5], strain[4], strain[2]]])
+    T = np.array(
+        [[strain[0], strain[3], strain[5]], [strain[3], strain[1], strain[4]], [strain[5], strain[4], strain[2]]]
+    )
     images = []
     for R in CUBIC_OPERATIONS:
         Tr = R @ T @ R.T
@@ -117,7 +121,9 @@ def load_and_split(data_csv, seed, fraction):
     key_to_id = {}
     symmetry_class = np.zeros(n_states, dtype=int)
     for i in range(n_states):
-        keys = [tuple(np.round(image, DATA["symmetry_decimals"])) for image in cubic_images(strain[i].astype(np.float64))]
+        keys = [
+            tuple(np.round(image, DATA["symmetry_decimals"])) for image in cubic_images(strain[i].astype(np.float64))
+        ]
         key = min(keys)
         if key not in key_to_id:
             key_to_id[key] = len(key_to_id)
@@ -173,13 +179,29 @@ def load_and_split(data_csv, seed, fraction):
     split[index_val] = "val"
     split[index_test] = "test"
 
-    return {"table": table, "strain": strain, "classes": classes, "split": split, "scaler": scaler,
-            "index_train": index_train, "index_val": index_val, "index_test": index_test, "labeled": labeled,
-            "x_train": x_train, "x_val": x_val, "x_test": x_test,
-            "strain_train": strain[index_train], "gap_train": gap[index_train],
-            "cbm_train": cbm[index_train], "vbm_train": vbm[index_train],
-            "gap_val": gap[index_val], "gap_test": gap[index_test],
-            "gap": gap, "cbm": cbm, "vbm": vbm}
+    return {
+        "table": table,
+        "strain": strain,
+        "classes": classes,
+        "split": split,
+        "scaler": scaler,
+        "index_train": index_train,
+        "index_val": index_val,
+        "index_test": index_test,
+        "labeled": labeled,
+        "x_train": x_train,
+        "x_val": x_val,
+        "x_test": x_test,
+        "strain_train": strain[index_train],
+        "gap_train": gap[index_train],
+        "cbm_train": cbm[index_train],
+        "vbm_train": vbm[index_train],
+        "gap_val": gap[index_val],
+        "gap_test": gap[index_test],
+        "gap": gap,
+        "cbm": cbm,
+        "vbm": vbm,
+    }
 
 
 # ======================================================================================================================
@@ -187,15 +209,17 @@ def load_and_split(data_csv, seed, fraction):
 # ======================================================================================================================
 def build_methods(seed, n_labeled):
     """The three regressors. Trees need at least two labeled states to split; the Gaussian process does not."""
-    kernel = (ConstantKernel(GP["amplitude_start"], tuple(GP["amplitude_bounds"]))
-              * RBF(length_scale=GP["length_scale_start"], length_scale_bounds=tuple(GP["length_scale_bounds"]))
-              + WhiteKernel(noise_level=GP["noise_start"], noise_level_bounds=tuple(GP["noise_bounds"])))
+    kernel = ConstantKernel(GP["amplitude_start"], tuple(GP["amplitude_bounds"])) * RBF(
+        length_scale=GP["length_scale_start"], length_scale_bounds=tuple(GP["length_scale_bounds"])
+    ) + WhiteKernel(noise_level=GP["noise_start"], noise_level_bounds=tuple(GP["noise_bounds"]))
     methods = {
-        "GaussianProcess": GaussianProcessRegressor(kernel=kernel, normalize_y=True, random_state=seed,
-                                                    n_restarts_optimizer=GP["restarts"]),
+        "GaussianProcess": GaussianProcessRegressor(
+            kernel=kernel, normalize_y=True, random_state=seed, n_restarts_optimizer=GP["restarts"]
+        ),
         "RandomForest": RandomForestRegressor(n_estimators=FOREST["trees"], random_state=seed, n_jobs=FOREST["jobs"]),
-        "GBDT": HistGradientBoostingRegressor(random_state=seed, max_iter=BOOSTING["trees"],
-                                              learning_rate=BOOSTING["learning_rate"]),
+        "GBDT": HistGradientBoostingRegressor(
+            random_state=seed, max_iter=BOOSTING["trees"], learning_rate=BOOSTING["learning_rate"]
+        ),
     }
     if n_labeled < 2:
         methods.pop("RandomForest")
@@ -224,9 +248,14 @@ def run_seed(data_csv, out, seed):
                 print("  ! %s seed %d, %d%%: %s" % (name, seed, fraction, error))
                 continue
             size = np.abs(prediction - y_test)
-            row = {"model": name, "seed": seed, "dft_pct": fraction, "n_labeled": len(y_labeled),
-                   "test_mae_meV": 1000 * size.mean(),
-                   "test_r2": 1 - ((y_test - prediction) ** 2).sum() / ((y_test - y_test.mean()) ** 2).sum()}
+            row = {
+                "model": name,
+                "seed": seed,
+                "dft_pct": fraction,
+                "n_labeled": len(y_labeled),
+                "test_mae_meV": 1000 * size.mean(),
+                "test_r2": 1 - ((y_test - prediction) ** 2).sum() / ((y_test - y_test.mean()) ** 2).sum(),
+            }
             for class_name in DATA["strain_classes"]:
                 in_class = test_classes == class_name
                 row["mae_%s_meV" % class_name] = 1000 * size[in_class].mean() if in_class.any() else np.nan
@@ -247,7 +276,9 @@ def run_study(data_csv, out, seeds, jobs):
         rows.extend(result)
     table = pd.DataFrame(rows)
     table.to_csv(os.path.join(out, "runs.csv"), index=False)
-    print(table.pivot_table(index="dft_pct", columns="model", values="test_mae_meV", aggfunc="mean").round(1).to_string())
+    print(
+        table.pivot_table(index="dft_pct", columns="model", values="test_mae_meV", aggfunc="mean").round(1).to_string()
+    )
 
 
 # ======================================================================================================================
@@ -273,14 +304,17 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ["run", "study"]:
         p = commands.add_parser(name)
-        p.add_argument("--data_csv", required=True,
-                       help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)")
+        p.add_argument(
+            "--data_csv", required=True, help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)"
+        )
         p.add_argument("--out", required=True, help="study folder")
         if name == "run":
             p.add_argument("--seed", type=int, required=True)
         else:
             p.add_argument("--seeds", default="%d-%d" % (STUDY["first_seed"], STUDY["last_seed"]))
-            p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="seeds at the same time")
+            p.add_argument(
+                "--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2), help="seeds at the same time"
+            )
     args = parser.parse_args()
     if args.command == "run":
         run_seed(args.data_csv, args.out, args.seed)

@@ -8,8 +8,7 @@ VBM and gap; ridge penalty on the five second-order constants, its strength by 5
 constants are the theta0 of every physics model of the paper. Evaluation uses the exact minimum over the valleys and
 the exact largest eigenvalue (the networks use smooth versions in training).
 
-Name in the paper: "analytic models alone". Campaign scripts: calib_v2.py, calibrate_constants.py,
-calibrate_heldout.py, calibrate_labelmatched.py. This file reproduces their constants exactly.
+Name in the paper: "analytic models alone". This file reproduces the constants of training/calibrate.py exactly.
 
 Experiments (--experiment):
   main          symmetry-grouped division; constants fitted on each run's training portion
@@ -60,6 +59,7 @@ from sklearn.preprocessing import StandardScaler
 # Command line
 #   parse_int_list(text), main()
 
+
 # ======================================================================================================================
 # SETTINGS (all in config.toml)
 # ======================================================================================================================
@@ -80,11 +80,12 @@ def cubic_point_group():
 
 
 MODEL_NAME = "analytic"
-EXPERIMENT_NAMES = ["main", "heldout", "labelmatched"]     # experiments (see the top of the file)
+EXPERIMENT_NAMES = ["main", "heldout", "labelmatched"]  # experiments (see the top of the file)
 # the settings file: config.toml next to this file, or another one given with ANALYTIC_CONFIG=<path>
 CONFIG_FILE = os.environ.get("ANALYTIC_CONFIG", os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.toml"))
-STUDY, DATA, EXPERIMENTS, CONSTANTS, PHYSICS, FIT = read_config(CONFIG_FILE, "study", "data", "experiments",
-                                                                "constants", "physics", "fit")
+STUDY, DATA, EXPERIMENTS, CONSTANTS, PHYSICS, FIT = read_config(
+    CONFIG_FILE, "study", "data", "experiments", "constants", "physics", "fit"
+)
 CUBIC_OPERATIONS = cubic_point_group()
 
 
@@ -96,7 +97,7 @@ def shear_shift(e, xi_up, delta_x, xp):
     xp is the array library (numpy here)."""
     eta = 4.0 * xi_up * e / delta_x
     size = xp.abs(eta)
-    return xp.where(size < 1.0, -0.25 * delta_x * eta ** 2, -0.25 * delta_x * (2.0 * size - 1.0))
+    return xp.where(size < 1.0, -0.25 * delta_x * eta**2, -0.25 * delta_x * (2.0 * size - 1.0))
 
 
 def valley_energies(strain, xi_d, xi_u, xi_up, xi_q, xi_c, xi_q2, delta_x):
@@ -107,16 +108,21 @@ def valley_energies(strain, xi_d, xi_u, xi_up, xi_q, xi_c, xi_q2, delta_x):
     e_xy = strain[:, 3]
     e_yz = strain[:, 4]
     e_zx = strain[:, 5]
-    i1 = e_xx + e_yy + e_zz                       # volume change (trace of the strain)
+    i1 = e_xx + e_yy + e_zz  # volume change (trace of the strain)
 
     def valley(e_axis):
-        return xi_d * i1 + xi_u * e_axis + xi_q * e_axis ** 2 + xi_c * i1 * e_axis + xi_q2 * i1 ** 2
+        return xi_d * i1 + xi_u * e_axis + xi_q * e_axis**2 + xi_c * i1 * e_axis + xi_q2 * i1**2
 
     if delta_x <= 0:
         # one-band shear term: used inside the fit before DELTA_X is added, and when shear is left out
-        columns = [valley(e_zz) + 2 * xi_up * e_xy, valley(e_zz) - 2 * xi_up * e_xy,
-                   valley(e_yy) + 2 * xi_up * e_zx, valley(e_yy) - 2 * xi_up * e_zx,
-                   valley(e_xx) + 2 * xi_up * e_yz, valley(e_xx) - 2 * xi_up * e_yz]
+        columns = [
+            valley(e_zz) + 2 * xi_up * e_xy,
+            valley(e_zz) - 2 * xi_up * e_xy,
+            valley(e_yy) + 2 * xi_up * e_zx,
+            valley(e_yy) - 2 * xi_up * e_zx,
+            valley(e_xx) + 2 * xi_up * e_yz,
+            valley(e_xx) - 2 * xi_up * e_yz,
+        ]
     else:
         z_pair = valley(e_zz) + shear_shift(e_xy, xi_up, delta_x, np)
         y_pair = valley(e_yy) + shear_shift(e_zx, xi_up, delta_x, np)
@@ -150,7 +156,7 @@ def vbm_numpy(strain, th):
     e_yz = strain[:, 4]
     e_zx = strain[:, 5]
     i1 = e_xx + e_yy + e_zz
-    hydrostatic = a_v * i1 + a_v2 * i1 ** 2
+    hydrostatic = a_v * i1 + a_v2 * i1**2
     dev_xx = e_xx - i1 / 3.0
     dev_yy = e_yy - i1 / 3.0
     dev_zz = e_zz - i1 / 3.0
@@ -248,14 +254,14 @@ def strain_class_of(name):
         return "biaxial"
     if name in ("isotropic", "triaxial", "shear"):
         return name
-    return "isotropic"                      # the unstrained state counts as isotropic
+    return "isotropic"  # the unstrained state counts as isotropic
 
 
 def cubic_images(strain):
     """The 48 images R e R^T of one strain state under the cubic operations (Voigt order)."""
-    T = np.array([[strain[0], strain[3], strain[5]],
-                  [strain[3], strain[1], strain[4]],
-                  [strain[5], strain[4], strain[2]]])
+    T = np.array(
+        [[strain[0], strain[3], strain[5]], [strain[3], strain[1], strain[4]], [strain[5], strain[4], strain[2]]]
+    )
     images = []
     for R in CUBIC_OPERATIONS:
         Tr = R @ T @ R.T
@@ -289,7 +295,10 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
         key_to_id = {}
         symmetry_class = np.zeros(n_states, dtype=int)
         for i in range(n_states):
-            keys = [tuple(np.round(image, DATA["symmetry_decimals"])) for image in cubic_images(strain[i].astype(np.float64))]
+            keys = [
+                tuple(np.round(image, DATA["symmetry_decimals"]))
+                for image in cubic_images(strain[i].astype(np.float64))
+            ]
             key = min(keys)
             if key not in key_to_id:
                 key_to_id[key] = len(key_to_id)
@@ -323,19 +332,21 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
         index_test = np.array(sorted(test_list))
     elif scheme.startswith("group_"):
         # one strain class is the test set; the rest is divided into training and validation, stratified by class
-        left_out = scheme[len("group_"):]
+        left_out = scheme[len("group_") :]
         index_test = all_index[classes == left_out]
         pool = all_index[classes != left_out]
-        index_train, index_val = train_test_split(pool, test_size=EXPERIMENTS["heldout_validation_share"],
-                                                  random_state=seed, stratify=classes[pool])
+        index_train, index_val = train_test_split(
+            pool, test_size=EXPERIMENTS["heldout_validation_share"], random_state=seed, stratify=classes[pool]
+        )
     elif scheme.startswith("magnitude_"):
         # every state whose largest strain component exceeds the threshold is the test set
-        threshold = int(scheme[len("magnitude_"):]) / 100
+        threshold = int(scheme[len("magnitude_") :]) / 100
         size = np.max(np.abs(strain), axis=1)
         index_test = all_index[size > threshold]
         pool = all_index[size <= threshold]
-        index_train, index_val = train_test_split(pool, test_size=EXPERIMENTS["heldout_validation_share"],
-                                                  random_state=seed)
+        index_train, index_val = train_test_split(
+            pool, test_size=EXPERIMENTS["heldout_validation_share"], random_state=seed
+        )
     else:
         raise SystemExit("unknown held-out scheme %s (known: %s)" % (scheme, ", ".join(heldout_schemes())))
 
@@ -363,13 +374,29 @@ def load_and_split(data_csv, seed, fraction, scheme=None):
     split[index_val] = "val"
     split[index_test] = "test"
 
-    return {"table": table, "strain": strain, "classes": classes, "split": split, "scaler": scaler,
-            "index_train": index_train, "index_val": index_val, "index_test": index_test, "labeled": labeled,
-            "x_train": x_train, "x_val": x_val, "x_test": x_test,
-            "strain_train": strain[index_train], "gap_train": gap[index_train],
-            "cbm_train": cbm[index_train], "vbm_train": vbm[index_train],
-            "gap_val": gap[index_val], "gap_test": gap[index_test],
-            "gap": gap, "cbm": cbm, "vbm": vbm}
+    return {
+        "table": table,
+        "strain": strain,
+        "classes": classes,
+        "split": split,
+        "scaler": scaler,
+        "index_train": index_train,
+        "index_val": index_val,
+        "index_test": index_test,
+        "labeled": labeled,
+        "x_train": x_train,
+        "x_val": x_val,
+        "x_test": x_test,
+        "strain_train": strain[index_train],
+        "gap_train": gap[index_train],
+        "cbm_train": cbm[index_train],
+        "vbm_train": vbm[index_train],
+        "gap_val": gap[index_val],
+        "gap_test": gap[index_test],
+        "gap": gap,
+        "cbm": cbm,
+        "vbm": vbm,
+    }
 
 
 def isotropic_mask(strain):
@@ -433,8 +460,9 @@ def fit_all_constants(data_csv, out, seeds, experiment="main", fractions=None):
                 use = np.zeros(len(strain), dtype=bool)
                 use[data["labeled"]] = True
                 use |= isotropic_mask(strain)
-            constants = fit_constants(strain[use], data["cbm_train"][use].astype(float),
-                                      data["vbm_train"][use].astype(float), seed)
+            constants = fit_constants(
+                strain[use], data["cbm_train"][use].astype(float), data["vbm_train"][use].astype(float), seed
+            )
             if scheme == "group_shear":
                 # no training state carries shear, so the shear constants are not determined by the data
                 constants["XI_UP"] = 0.0
@@ -442,8 +470,11 @@ def fit_all_constants(data_csv, out, seeds, experiment="main", fractions=None):
                 constants["DELTA_X"] = 0.0
             with open(path, "w") as f:
                 json.dump(constants, f, indent=1)
-            print("constants for seed %d (%s %s) fitted on %d states (%.0f s)"
-                  % (seed, experiment, scheme or "%d%%" % fraction, int(use.sum()), time.time() - start), flush=True)
+            print(
+                "constants for seed %d (%s %s) fitted on %d states (%.0f s)"
+                % (seed, experiment, scheme or "%d%%" % fraction, int(use.sum()), time.time() - start),
+                flush=True,
+            )
 
 
 def evaluate(data_csv, out, seeds, experiment="main", fractions=None):
@@ -460,14 +491,21 @@ def evaluate(data_csv, out, seeds, experiment="main", fractions=None):
             th = np.array([constants[name] for name in names])
             data = load_and_split(data_csv, seed, fraction, scheme)
             test = data["index_test"]
-            strain = data["table"][DATA["strain_columns"]].values[test]      # float64, as read from the dataset
+            strain = data["table"][DATA["strain_columns"]].values[test]  # float64, as read from the dataset
             prediction = gap_numpy(strain, th)
             truth = data["table"]["Eg_eV"].values[test]
             error = prediction - truth
-            row = {"experiment": experiment, "scheme": scheme or "", "seed": seed, "fraction": fraction,
-                   "n_fit": "", "test_mae_meV": np.abs(error).mean() * 1000,
-                   "test_rmse_meV": np.sqrt((error ** 2).mean()) * 1000, "test_max_meV": np.abs(error).max() * 1000,
-                   "test_r2": 1.0 - (error ** 2).sum() / ((truth - truth.mean()) ** 2).sum()}
+            row = {
+                "experiment": experiment,
+                "scheme": scheme or "",
+                "seed": seed,
+                "fraction": fraction,
+                "n_fit": "",
+                "test_mae_meV": np.abs(error).mean() * 1000,
+                "test_rmse_meV": np.sqrt((error**2).mean()) * 1000,
+                "test_max_meV": np.abs(error).max() * 1000,
+                "test_r2": 1.0 - (error**2).sum() / ((truth - truth.mean()) ** 2).sum(),
+            }
             classes = data["classes"][test]
             for class_name in DATA["strain_classes"]:
                 in_class = classes == class_name
@@ -505,8 +543,9 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ["constants", "evaluate", "study"]:
         p = commands.add_parser(name)
-        p.add_argument("--data_csv", required=True,
-                       help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)")
+        p.add_argument(
+            "--data_csv", required=True, help="the dataset (columns E_xx ... E_zx, Eg_eV, CBM_eV, VBM_eV, strain_type)"
+        )
         p.add_argument("--out", required=True, help="study folder")
         p.add_argument("--experiment", default="main", choices=EXPERIMENT_NAMES)
         p.add_argument("--seeds", default="%d-%d" % (STUDY["first_seed"], STUDY["last_seed"]))

@@ -9,11 +9,11 @@ relaxed structure and the absolute energies.
 | `contcar_relaxed_PBE.tar.gz` | The same structures as VASP CONTCAR files, one per state (`structures/state_<id>_<name>.CONTCAR`). |
 | `INCAR_1-GGA-PBE_relaxation` | Step 1: relaxation of the atomic positions at fixed cell shape and volume with the PBE functional (IBRION = 2, ISIF = 2, EDIFFG = −0.001 eV/Å, NSW = 500). |
 | `INCAR_2-HSE_single_point` | Step 2: single-point HSE calculation on the relaxed structure (LHFCALC, HFSCREEN = 0.2 Å⁻¹, AEXX = 0.27, i.e. 27% exact exchange), started from the step-1 wavefunctions and charge density (ISTART = 1, ICHARG = 1). |
-| `KPOINTS` | Γ-centred 7×7×7 grid, identical for both steps and all states. |
+| `KPOINTS` | Γ-centered 7×7×7 grid, identical for both steps and all states. |
 | `POTCAR.spec` | Identifier of the PAW potential (PAW_PBE C 08Apr2002, four valence electrons). The potential file itself is VASP-licensed and is not redistributed. |
 
 Both steps use ENCUT = 550 eV, Gaussian smearing of 0.01 eV, no spin polarization, EDIFF = 10⁻⁶ eV and no symmetry
-(ISYM = 0). Code: VASP 6.2.0. The full list of settings is Supplementary Table 11 of the paper.
+(ISYM = 0). Code: VASP 6.2.0. The full list of settings is Supplementary Table 10 of the paper.
 
 Notes:
 - `INCAR_1` contains `PREC = Accuratei` (a stray character in the original input). VASP reads the setting as

@@ -1,15 +1,10 @@
-# Training runs write into results/; only the fitted constants of the analytic models are part of the repository.
-results/*
-!results/98_constants_v2/
-!results/100_constants_labelmatched/
-!results/98_constants_2band/
-!results/100_constants_labelmatched_2band/
-
-# Generated task lists, cluster logs, smoke runs and figure previews
-tasks/
-logs/
+# Outputs of training and analysis (the fitted constants in training/constants are part of the repository)
+training/results/
+training/tasks/
+training/logs/
+training/env_versions.txt
+models/*/study/
 outputs/figures/preview/
-env_versions.txt
 
 # Python
 __pycache__/
