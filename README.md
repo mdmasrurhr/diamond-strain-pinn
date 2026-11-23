@@ -1,7 +1,7 @@
 # A physics-informed neural network for strain-dependent bandgaps in diamond
 
 Code and data for the paper *A physics-informed neural network for strain-dependent bandgaps in diamond*
-(M. M. H. Rakin, N. Rabelo Martins, L. M. Scolfaro, R. Shadman, A. Haque, A. Dutta, A. Bora and D. Valles;
+(M. M. H. Rakin, N. R. Martins, L. M. Scolfaro, R. Shadman, A. Haque, A. Dutta, A. Bora and D. Valles;
 submitted to *Communications Materials*).
 
 The models predict the bandgap of diamond under an arbitrary strain, given as the six components of the Green–Lagrange
