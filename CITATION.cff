@@ -31,7 +31,7 @@ authors:
     affiliation: Ingram School of Engineering, Texas State University
 repository-code: https://github.com/mdmasrurhr/diamond-strain-pinn
 version: 1.0.0
-date-released: 2026-11-20
+date-released: 2026-11-23
 abstract: >-
   Code and data for predicting the bandgap of strained diamond from the
   six-component Green-Lagrange strain tensor. The dataset holds 1,292
