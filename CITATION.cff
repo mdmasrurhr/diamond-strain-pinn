@@ -30,6 +30,14 @@ authors:
     given-names: Damian
     affiliation: Ingram School of Engineering, Texas State University
 repository-code: https://github.com/mdmasrurhr/diamond-strain-pinn
+doi: 10.5281/zenodo.24483464
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24483464
+    description: Version 1.0.0, the version used in the paper
+  - type: doi
+    value: 10.5281/zenodo.24483463
+    description: All versions on Zenodo
 version: 1.0.0
 date-released: 2026-11-23
 abstract: >-

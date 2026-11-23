@@ -1,5 +1,7 @@
 # A physics-informed neural network for strain-dependent bandgaps in diamond
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24483464.svg)](https://doi.org/10.5281/zenodo.24483464)
+
 Code and data for the paper *A physics-informed neural network for strain-dependent bandgaps in diamond*
 (M. M. H. Rakin, N. R. Martins, L. M. Scolfaro, R. Shadman, A. Haque, A. Dutta, A. Bora and D. Valles;
 submitted to *Communications Materials*).
@@ -71,3 +73,4 @@ refit of the analytic models with extra shear terms (Supplementary Note 8).
 ## License and citation
 
 MIT license (`LICENSE`). If you use the code or the data, please cite the paper and this repository (`CITATION.cff`).
+Version 1.0.0, the version used in the paper, is archived on Zenodo: https://doi.org/10.5281/zenodo.24483464.
